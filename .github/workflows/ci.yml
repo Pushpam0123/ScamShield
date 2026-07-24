@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+jobs:
+  build:
+    name: Assemble, test, lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Rules are data (architecture.md §11). The pack is compiled from rulepack/src and
+      # the build fails on an invalid pack — a partially-loaded pack must never ship.
+      - name: Build rule pack
+        run: |
+          python3 -m pip install --quiet jsonschema
+          python3 rulepack/build_rulepack.py
+
+      - name: Unit tests
+        run: ./gradlew test --stacktrace
+
+      # architecture.md §10.1 — :core:model and every analyzer module must resolve neither
+      # an Android nor a network dependency. This is the structural half of the privacy
+      # promise; the network-audit instrumented test (Phase 6) is the behavioural half.
+      - name: Privacy boundary check
+        run: ./gradlew checkPrivacyBoundary --stacktrace
+
+      - name: Lint
+        run: ./gradlew lint --stacktrace
+
+      - name: Assemble release
+        run: ./gradlew :app:assembleRelease --stacktrace
+
+      # G5: APK <= 25 MB. Reported on every run so a size regression is visible in the
+      # diff that caused it, not three months later when it breaches.
+      - name: APK size report
+        run: ./gradlew :app:checkApkSize
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reports
+          path: |
+            **/build/reports/
+            **/build/test-results/
+          retention-days: 14

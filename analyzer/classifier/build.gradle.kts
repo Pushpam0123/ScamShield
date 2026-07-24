@@ -26,7 +26,8 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.onnxruntime.android)
-    implementation(libs.tokenizers.android)
+    implementation(libs.tokenizers)
+    implementation(libs.tokenizers.native.android)
 
     testImplementation(libs.junit4)
     testImplementation(libs.truth)

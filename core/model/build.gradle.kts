@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    id("scamshield.privacy-boundary")
 }
 
 // architecture.md §5: ":core:model depends on nothing."

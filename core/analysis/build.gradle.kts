@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.kotlin.jvm)
+    id("scamshield.privacy-boundary")
 }
 
 // architecture.md §5: ":core:analysis depends on the analyzer *interfaces* only, never their

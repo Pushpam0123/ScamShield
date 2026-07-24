@@ -26,7 +26,9 @@ datastore = "1.1.1"
 
 # Inference (architecture.md §4: ONNX Runtime Mobile, HF tokenizers — do not substitute)
 onnxruntime = "1.19.2"
-tokenizers = "0.20.3"
+# DJL 0.33.0 wraps HuggingFace tokenizers >= 0.20 (architecture.md §4) and is the only
+# packaging that ships an Android native library — see DECISIONS.md D-009.
+djlTokenizers = "0.33.0"
 
 junit4 = "4.13.2"
 junit5 = "5.11.3"
@@ -79,7 +81,8 @@ room-testing = { module = "androidx.room:room-testing", version.ref = "room" }
 
 # --- Inference ---
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
-tokenizers-android = { module = "ai.djl.huggingface:tokenizers", version.ref = "tokenizers" }
+tokenizers = { module = "ai.djl.huggingface:tokenizers", version.ref = "djlTokenizers" }
+tokenizers-native-android = { module = "ai.djl.android:tokenizer-native", version.ref = "djlTokenizers" }
 
 # --- Test ---
 junit4 = { module = "junit:junit", version.ref = "junit4" }

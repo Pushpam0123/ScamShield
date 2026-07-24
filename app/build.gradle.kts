@@ -68,6 +68,41 @@ android {
     }
 }
 
+/**
+ * G5: the APK must stay under 25 MB.
+ *
+ * This measures the on-disk size of the release APK, which is an upper bound on Play's
+ * download size — Play serves a compressed, device-targeted split, so the real number is
+ * smaller. Reporting the pessimistic figure keeps the budget honest, and reporting it on
+ * every CI run means a regression shows up in the change that caused it.
+ */
+val apkSizeBudgetBytes = 25L * 1024 * 1024
+
+val checkApkSize = tasks.register("checkApkSize") {
+    group = "verification"
+    description = "Fails if the release APK exceeds the 25 MB budget (architecture.md G5)"
+    dependsOn("assembleRelease")
+
+    val apkDir = layout.buildDirectory.dir("outputs/apk/release")
+    val budget = apkSizeBudgetBytes
+
+    doLast {
+        val apks = apkDir.get().asFile.listFiles { f -> f.extension == "apk" }.orEmpty()
+        if (apks.isEmpty()) throw GradleException("No release APK found in ${apkDir.get().asFile}")
+
+        apks.forEach { apk ->
+            val mb = apk.length() / 1024.0 / 1024.0
+            logger.lifecycle("APK ${apk.name}: %.2f MB (budget %.0f MB)".format(mb, budget / 1024.0 / 1024.0))
+            if (apk.length() > budget) {
+                throw GradleException(
+                    "${apk.name} is %.2f MB, over the %.0f MB budget of architecture.md G5."
+                        .format(mb, budget / 1024.0 / 1024.0),
+                )
+            }
+        }
+    }
+}
+
 dependencies {
     // architecture.md §5 — :app is the only module that may see analyzer *implementations*.
     // It binds them to interfaces via Hilt so that :core:analysis stays implementation-blind.
