@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      A bare Material3 theme. Everything visual is decided in Compose (ui/theme/Theme.kt);
+      this exists only so the activity has a window background and status-bar treatment
+      before the first frame composes.
+    -->
+    <style name="Theme.ScamShield" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+    </style>
+</resources>

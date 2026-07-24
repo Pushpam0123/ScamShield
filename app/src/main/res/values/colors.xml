@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches LightSurface in ui/theme/Color.kt so there is no flash on cold start. -->
+    <color name="window_background">#FDFBFF</color>
+    <color name="ic_launcher_background">#1B4B8F</color>
+</resources>

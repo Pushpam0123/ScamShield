@@ -20,6 +20,8 @@ dependencyResolutionManagement {
     }
 }
 
+enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
+
 rootProject.name = "ScamShield"
 
 // architecture.md §5 — component structure. Dependencies point inward toward :core:model.
@@ -35,4 +37,7 @@ include(":analyzer:sender")
 include(":analyzer:pattern")
 include(":analyzer:classifier")
 
-include(":benchmark")
+// :benchmark is introduced in Phase 4, where there is a model to measure and a `benchmark`
+// build type for it to target. Including an empty com.android.test module before then only
+// adds a variant that cannot be assembled. See DECISIONS.md D-007.
+// include(":benchmark")

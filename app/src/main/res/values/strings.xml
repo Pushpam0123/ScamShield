@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  architecture.md C5: every user-visible string lives here. No literal may appear in a
+  composable. design.md §8 sets the copy rules that all of these must obey:
+    - never say "safe" unqualified
+    - never blame the user
+    - reading level <= grade 6, short sentences, no jargon
+      ("fake website", not "phishing"; "web address", not "domain")
+-->
+<resources>
+    <string name="app_name">ScamShield</string>
+
+    <!-- Check screen -->
+    <string name="check_title">Check a message</string>
+    <string name="check_input_label">Paste the message here</string>
+    <string name="check_input_placeholder">Paste or type the message you received</string>
+    <string name="check_paste_button">Paste from clipboard</string>
+    <string name="check_cta">Check this message</string>
+    <string name="check_clear">Clear</string>
+    <string name="check_empty_state">Got a message that seems odd? Copy it, or tap Share in
+        WhatsApp or Messages and choose ScamShield.</string>
+    <string name="check_clipboard_empty">There is nothing to paste right now.</string>
+
+    <!-- Verdict headlines (design.md §10.2) -->
+    <string name="verdict_scam_headline">This looks like a scam</string>
+    <string name="verdict_suspicious_headline">Be careful with this message</string>
+    <string name="verdict_safe_headline">No danger signs found</string>
+    <string name="verdict_safe_subtitle">We did not spot anything wrong. Stay careful anyway.</string>
+
+    <!-- Confidence -->
+    <string name="confidence_high">We are quite sure</string>
+    <string name="confidence_medium">We are fairly sure</string>
+    <string name="confidence_low">We are not fully sure</string>
+
+    <!-- Result screen -->
+    <string name="result_title">Result</string>
+    <string name="result_why_heading">Why we think so</string>
+    <string name="result_show_all_evidence">Show all reasons</string>
+    <string name="result_show_fewer_evidence">Show fewer reasons</string>
+    <string name="result_what_to_do_heading">What you should do</string>
+    <string name="result_listen">Listen</string>
+    <string name="result_stop_listening">Stop</string>
+    <string name="result_check_another">Check another message</string>
+    <string name="result_helpful_question">Was this helpful?</string>
+    <string name="result_helpful_yes">Yes</string>
+    <string name="result_helpful_no">No</string>
+    <string name="result_message_heading">The message you checked</string>
+
+    <!-- Content descriptions (design.md §10.3 — every element gets one) -->
+    <string name="cd_verdict_scam">Warning. This message looks like a scam.</string>
+    <string name="cd_verdict_suspicious">Caution. Be careful with this message.</string>
+    <string name="cd_verdict_safe">No danger signs were found in this message.</string>
+    <string name="cd_back">Go back</string>
+
+    <!-- Errors -->
+    <string name="error_empty_message">Please paste a message first.</string>
+    <string name="error_analysis_failed">Something went wrong while checking. Please try again.</string>
+</resources>

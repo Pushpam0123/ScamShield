@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      architecture.md C2: INTERNET is the only permission this app may ever request, and it
+      exists solely for the opt-in RDAP domain lookup, which is OFF by default and transmits
+      nothing but a registrable domain (§10.4).
+
+      architecture.md §2 is a hard prohibition on READ_SMS / RECEIVE_SMS. Do not add them.
+      Entry is share sheet, clipboard, and manual paste only. A rejected app protects nobody
+      (ADR-004).
+    -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:name=".ScamShieldApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.ScamShield">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:launchMode="singleTask"
+            android:theme="@style/Theme.ScamShield"
+            android:windowSoftInputMode="adjustResize">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!--
+              implementation.md Phase 0: the share-sheet entry point. Selecting text in
+              WhatsApp or the SMS app and choosing "Share > ScamShield" lands here with the
+              message in EXTRA_TEXT.
+            -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+
+            <!-- "Process text" — appears in the text-selection toolbar itself, which is
+                 one tap shorter than the share sheet for users reading a message inline. -->
+            <intent-filter>
+                <action android:name="android.intent.action.PROCESS_TEXT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>
