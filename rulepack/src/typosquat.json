@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "_comment": [
+    "Confusable-character folding and the distance thresholds for typosquat detection",
+    "(design.md §3.2, §3.3).",
+    "",
+    "Folding runs on the ORIGINAL host string, never the normalized one. NFKC normalization",
+    "already collapses some of these, which is exactly why the analyzer must not use its",
+    "output: if `ѕbi.com` has silently become `sbi.com` by the time the URL analyzer sees it,",
+    "the homograph is invisible and the message looks clean.",
+    "",
+    "Order of operations in §3.3: single-character folds first, then sequence folds, then",
+    "re-run typosquat matching against banks.json. A fold that turns an unknown host into a",
+    "known brand is a strong hit.",
+    "",
+    "Note what is deliberately NOT here: leetspeak digit-to-letter folds (0->o, 1->i, 3->e).",
+    "design.md §3.2 already strips digits in the `squash` rule, so sbi1-verify.xyz is caught",
+    "there. Folding digits to letters as well would make unrelated domains collide with brand",
+    "labels in both directions and is pure false-positive surface.",
+    "",
+    "Every key in `single_char_folds` must be exactly one character; the build script enforces",
+    "it. Commentary lives in this array, not interleaved with the data, so that the loader can",
+    "read the map without having to filter out pseudo-entries."
+  ],
+
+  "single_char_folds": {
+    "а": "a", "е": "e", "о": "o", "р": "p", "с": "c", "у": "y", "х": "x", "ѕ": "s",
+    "і": "i", "ј": "j", "һ": "h", "ԁ": "d", "ɡ": "g", "ᴏ": "o", "м": "m", "т": "t",
+    "в": "b", "к": "k", "н": "h", "А": "a", "В": "b", "Е": "e", "К": "k", "М": "m",
+    "Н": "h", "О": "o", "Р": "p", "С": "c", "Т": "t", "Х": "x", "У": "y",
+
+    "α": "a", "ο": "o", "ρ": "p", "ν": "v", "τ": "t", "υ": "u", "κ": "k", "ι": "i",
+    "β": "b", "γ": "y", "δ": "d", "ε": "e", "ζ": "z", "η": "n", "θ": "o", "μ": "u",
+    "σ": "o", "φ": "o", "χ": "x", "ω": "w",
+    "Α": "a", "Β": "b", "Ε": "e", "Ζ": "z", "Η": "h", "Ι": "i", "Κ": "k", "Μ": "m",
+    "Ν": "n", "Ο": "o", "Ρ": "p", "Τ": "t", "Υ": "y", "Χ": "x",
+
+    "ո": "n", "ս": "u", "օ": "o", "գ": "q", "հ": "h", "ա": "w",
+
+    "ı": "i", "í": "i", "ì": "i", "î": "i", "ï": "i", "į": "i", "ĭ": "i",
+    "á": "a", "à": "a", "â": "a", "ä": "a", "ã": "a", "å": "a", "ā": "a", "ă": "a",
+    "é": "e", "è": "e", "ê": "e", "ë": "e", "ē": "e", "ĕ": "e", "ė": "e", "ę": "e",
+    "ó": "o", "ò": "o", "ô": "o", "ö": "o", "õ": "o", "ø": "o", "ō": "o", "ŏ": "o",
+    "ú": "u", "ù": "u", "û": "u", "ü": "u", "ū": "u", "ŭ": "u", "ů": "u",
+    "ç": "c", "ć": "c", "č": "c", "ĉ": "c",
+    "ñ": "n", "ń": "n", "ň": "n",
+    "ś": "s", "š": "s", "ş": "s", "ŝ": "s",
+    "ý": "y", "ÿ": "y", "ŷ": "y",
+    "ĝ": "g", "ğ": "g", "ģ": "g",
+    "ł": "l", "ĺ": "l", "ľ": "l",
+    "ŕ": "r", "ř": "r",
+    "ţ": "t", "ť": "t",
+    "ż": "z", "ź": "z", "ž": "z",
+    "đ": "d", "ď": "d",
+    "ĥ": "h", "ħ": "h",
+    "ķ": "k",
+    "ŵ": "w",
+    "ƅ": "b",
+
+    "０": "0", "１": "1", "２": "2", "３": "3", "４": "4",
+    "５": "5", "６": "6", "７": "7", "８": "8", "９": "9",
+    "ａ": "a", "ｂ": "b", "ｃ": "c", "ｄ": "d", "ｅ": "e", "ｆ": "f", "ｇ": "g",
+    "ｈ": "h", "ｉ": "i", "ｊ": "j", "ｋ": "k", "ｌ": "l", "ｍ": "m", "ｎ": "n",
+    "ｏ": "o", "ｐ": "p", "ｑ": "q", "ｒ": "r", "ｓ": "s", "ｔ": "t", "ｕ": "u",
+    "ｖ": "v", "ｗ": "w", "ｘ": "x", "ｙ": "y", "ｚ": "z",
+
+    "𝗮": "a", "𝗯": "b", "𝗰": "c", "𝗱": "d", "𝗲": "e", "𝘀": "s", "𝗶": "i", "𝗼": "o"
+  },
+
+  "sequence_folds": {
+    "rn": "m",
+    "vv": "w",
+    "cl": "d",
+    "nn": "m"
+  },
+  "_sequence_folds_comment": [
+    "Render-level confusions: sequences that look like one glyph at SMS font sizes.",
+    "Applied after single-character folding. Kept short — each entry is a chance to fold two",
+    "innocent letters into a brand match, so only the ones that genuinely deceive are listed."
+  ],
+
+  "distance": {
+    "short_label_max_length": 6,
+    "short_label_distance": 1,
+    "long_label_distance": 2
+  },
+  "_distance_comment": [
+    "Damerau-Levenshtein thresholds from design.md §3.2, compared on the label with the TLD",
+    "stripped. Short brand labels get a tighter budget because at distance 2 a 3-letter label",
+    "is barely constrained: `sbi` within 2 edits reaches most three-letter strings, and the",
+    "analyzer would start flagging unrelated small businesses."
+  ],
+
+  "suspicious_tlds": [
+    "xyz", "top", "tk", "ml", "ga", "cf", "gq", "buzz", "rest", "click", "link",
+    "work", "fit", "loan", "men", "date", "download", "review", "country", "stream",
+    "racing", "win", "bid", "trade", "party", "science", "accountant", "faith",
+    "cricket", "webcam", "gdn", "kim", "mom", "lol", "cyou", "icu", "cam", "quest",
+    "sbs", "autos", "beauty", "hair", "skin", "makeup", "monster", "rodeo", "cn"
+  ],
+  "_suspicious_tlds_comment": [
+    "High-abuse TLDs, yielding SUSPICIOUS_TLD at WARN (design.md §3.4). Never CRITICAL on its",
+    "own — plenty of legitimate Indian small businesses sit on .xyz because it is cheap.",
+    "",
+    "Mainstream TLDs that appear on abuse lists are deliberately excluded: .info, .online,",
+    ".site, .store, .shop, .space, .live, .biz. Indian small businesses and genuine services",
+    "use all of them, and every one added here costs precision on the hard negatives that",
+    "Phase 1 must pass with zero tolerance."
+  ]
+}
