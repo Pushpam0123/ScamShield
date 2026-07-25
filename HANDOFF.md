@@ -60,10 +60,10 @@ export JAVA_HOME=/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home 
 
 ### Emulator
 
-`system-images;android-35;google_apis;arm64-v8a` is installed (verified: the directory
-`/opt/homebrew/share/android-commandlinetools/system-images/android-35` exists). **No AVD has
-been created and the emulator has never been launched.** Phase 0's last acceptance row — share
-text from another app and see it populate ScamShield — is waiting on this:
+`system-images;android-35;google_apis;arm64-v8a` and the `emulator` binary are both installed
+and verified present. **No AVD has been created and the emulator has never been launched.**
+Phase 0's last acceptance row — share text from another app and see it populate ScamShield —
+is waiting on this:
 
 ```bash
 avdmanager create avd -n scamshield-35 -k "system-images;android-35;google_apis;arm64-v8a" --device pixel_6
