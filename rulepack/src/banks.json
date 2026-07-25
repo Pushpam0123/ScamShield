@@ -1,0 +1,779 @@
+{
+  "schema_version": 1,
+  "_comment": [
+    "Organisations an Indian scam message impersonates. Consumed by two places:",
+    "  1. Brand-claim extraction (design.md §4.1) matches `aliases` against normalized text.",
+    "  2. Typosquat detection (design.md §3.2) compares candidate hosts against `domains`.",
+    "",
+    "ALIAS PRECISION IS THE WHOLE GAME. A brand claim gates the URL analyzer's force-verdict",
+    "rule (§3.5), so an over-broad alias turns a legitimate message into a forced SCAM verdict.",
+    "Never add a bare common noun: not `bank`, not `pay`, not `card`, not `post`. Every alias",
+    "here should be a string that a message has essentially no innocent reason to contain",
+    "unless it is talking about this organisation.",
+    "",
+    "`dlt_headers` are the body of the TRAI DLT sender ID, i.e. the part after the two-letter",
+    "operator prefix: `VM-SBIINB` has header `SBIINB`. The registry is not public, so this list",
+    "is best-effort from publicly observed commercial SMS and is deliberately incomplete.",
+    "That is safe by construction: DLT_HEADER_MISMATCH (design.md §4.2) fires only when a",
+    "header is known AND maps to a different brand. An unknown header produces no evidence.",
+    "",
+    "A header may legitimately belong to more than one brand here — GOOGLE covers both Google",
+    "and Google Pay, AMAZON covers both Amazon and Amazon Pay. The loader must therefore build",
+    "header -> SET of brand ids, and the mismatch rule must fire only when that set is disjoint",
+    "from the set of brands the message claims. A one-to-one map would raise DLT_HEADER_MISMATCH",
+    "on genuine Google Pay and Amazon Pay messages, which is exactly the class of false positive",
+    "the hard-negative work exists to prevent."
+  ],
+
+  "brands": [
+    { "id": "sbi", "display_name": "State Bank of India",
+      "aliases": ["sbi", "state bank of india", "state bank", "yono sbi", "sbi card", "onlinesbi"],
+      "domains": ["onlinesbi.sbi", "sbi.co.in", "yono.sbi", "sbicard.com", "bank.sbi"],
+      "dlt_headers": ["SBIINB", "SBIBNK", "SBIUPI", "SBIPSG", "ATMSBI", "SBICRD", "SBIYNO", "SBIBK"] },
+
+    { "id": "hdfc", "display_name": "HDFC Bank",
+      "aliases": ["hdfc", "hdfc bank", "hdfcbank"],
+      "domains": ["hdfcbank.com", "hdfc.com", "payzapp.in"],
+      "dlt_headers": ["HDFCBK", "HDFCBN", "HDFCB", "HDFCCC"] },
+
+    { "id": "icici", "display_name": "ICICI Bank",
+      "aliases": ["icici", "icici bank", "icicibank", "imobile"],
+      "domains": ["icicibank.com", "icicidirect.com"],
+      "dlt_headers": ["ICICIB", "ICICIT", "ICICIP", "IMOBLE"] },
+
+    { "id": "axis", "display_name": "Axis Bank",
+      "aliases": ["axis bank", "axisbank"],
+      "domains": ["axisbank.com", "axisbank.co.in"],
+      "dlt_headers": ["AXISBK", "AXISBN", "AXISB"] },
+
+    { "id": "kotak", "display_name": "Kotak Mahindra Bank",
+      "aliases": ["kotak", "kotak mahindra", "kotak bank"],
+      "domains": ["kotak.com", "kotaksecurities.com"],
+      "dlt_headers": ["KOTAKB", "KOTAKM", "KMBLTD"] },
+
+    { "id": "pnb", "display_name": "Punjab National Bank",
+      "aliases": ["pnb", "punjab national bank", "punjab national"],
+      "domains": ["pnbindia.in", "netpnb.com", "pnbnet.org.in"],
+      "dlt_headers": ["PNBSMS", "PNBBNK", "PNBIND"] },
+
+    { "id": "bob", "display_name": "Bank of Baroda",
+      "aliases": ["bank of baroda", "bob world", "baroda bank"],
+      "domains": ["bankofbaroda.in", "bankofbaroda.co.in", "bobibanking.com"],
+      "dlt_headers": ["BOBSMS", "BOBTXN", "BOBIND", "BOBWLD"] },
+
+    { "id": "canara", "display_name": "Canara Bank",
+      "aliases": ["canara bank", "canarabank", "canara ai1"],
+      "domains": ["canarabank.com", "canarabank.in"],
+      "dlt_headers": ["CANBNK", "CANARA", "CBSSMS"] },
+
+    { "id": "union_bank", "display_name": "Union Bank of India",
+      "aliases": ["union bank of india", "union bank", "vyom app"],
+      "domains": ["unionbankofindia.co.in", "unionbankofindia.bank"],
+      "dlt_headers": ["UNIONB", "UBIBNK", "UNIONK"] },
+
+    { "id": "boi", "display_name": "Bank of India",
+      "aliases": ["bank of india", "boi omni"],
+      "domains": ["bankofindia.co.in", "bankofindia.bank"],
+      "dlt_headers": ["BOIIND", "BOISMS", "BOIBNK"] },
+
+    { "id": "indian_bank", "display_name": "Indian Bank",
+      "aliases": ["indian bank", "indsmart", "allahabad bank"],
+      "domains": ["indianbank.in", "indianbank.net.in"],
+      "dlt_headers": ["INDBNK", "IBANK", "INDBK"] },
+
+    { "id": "central_bank", "display_name": "Central Bank of India",
+      "aliases": ["central bank of india", "cent bank"],
+      "domains": ["centralbankofindia.co.in"],
+      "dlt_headers": ["CENTBK", "CBIIND"] },
+
+    { "id": "iob", "display_name": "Indian Overseas Bank",
+      "aliases": ["indian overseas bank", "iob bank"],
+      "domains": ["iob.in", "iobnet.co.in"],
+      "dlt_headers": ["IOBCHN", "IOBIND"] },
+
+    { "id": "uco", "display_name": "UCO Bank",
+      "aliases": ["uco bank", "ucobank"],
+      "domains": ["ucobank.com", "ucobank.in"],
+      "dlt_headers": ["UCOBNK", "UCOIND"] },
+
+    { "id": "maharashtra", "display_name": "Bank of Maharashtra",
+      "aliases": ["bank of maharashtra", "mahabank"],
+      "domains": ["bankofmaharashtra.in", "mahaconnect.in"],
+      "dlt_headers": ["MAHABK", "BOMSMS"] },
+
+    { "id": "psb", "display_name": "Punjab & Sind Bank",
+      "aliases": ["punjab and sind bank", "punjab & sind bank", "punjab sind bank"],
+      "domains": ["punjabandsindbank.co.in"],
+      "dlt_headers": ["PSBIND", "PSBBNK"] },
+
+    { "id": "idbi", "display_name": "IDBI Bank",
+      "aliases": ["idbi", "idbi bank"],
+      "domains": ["idbibank.in", "idbibank.co.in"],
+      "dlt_headers": ["IDBIBK", "IDBIBN"] },
+
+    { "id": "yes_bank", "display_name": "YES Bank",
+      "aliases": ["yes bank", "yesbank"],
+      "domains": ["yesbank.in", "yesbank.co.in"],
+      "dlt_headers": ["YESBNK", "YESBK"] },
+
+    { "id": "indusind", "display_name": "IndusInd Bank",
+      "aliases": ["indusind", "indusind bank"],
+      "domains": ["indusind.com"],
+      "dlt_headers": ["INDUSB", "INDUSI"] },
+
+    { "id": "idfc", "display_name": "IDFC FIRST Bank",
+      "aliases": ["idfc", "idfc first", "idfc first bank"],
+      "domains": ["idfcfirstbank.com", "idfcbank.com"],
+      "dlt_headers": ["IDFCFB", "IDFCBK"] },
+
+    { "id": "federal", "display_name": "Federal Bank",
+      "aliases": ["federal bank", "fedmobile"],
+      "domains": ["federalbank.co.in"],
+      "dlt_headers": ["FEDBNK", "FEDRAL"] },
+
+    { "id": "south_indian", "display_name": "South Indian Bank",
+      "aliases": ["south indian bank", "sib mirror"],
+      "domains": ["southindianbank.com"],
+      "dlt_headers": ["SIBLTD", "SIBSMS"] },
+
+    { "id": "kvb", "display_name": "Karur Vysya Bank",
+      "aliases": ["karur vysya", "kvb bank"],
+      "domains": ["kvb.co.in"],
+      "dlt_headers": ["KVBANK", "KVBLTD"] },
+
+    { "id": "cub", "display_name": "City Union Bank",
+      "aliases": ["city union bank", "cub bank"],
+      "domains": ["cityunionbank.com"],
+      "dlt_headers": ["CUBANK", "CUBLTD"] },
+
+    { "id": "rbl", "display_name": "RBL Bank",
+      "aliases": ["rbl bank", "rblbank"],
+      "domains": ["rblbank.com"],
+      "dlt_headers": ["RBLBNK", "RBLBK"] },
+
+    { "id": "bandhan", "display_name": "Bandhan Bank",
+      "aliases": ["bandhan bank", "bandhanbank"],
+      "domains": ["bandhanbank.com"],
+      "dlt_headers": ["BANDHN", "BNDHAN"] },
+
+    { "id": "au_bank", "display_name": "AU Small Finance Bank",
+      "aliases": ["au small finance", "au bank", "aubank"],
+      "domains": ["aubank.in"],
+      "dlt_headers": ["AUBANK", "AUSFBL"] },
+
+    { "id": "equitas", "display_name": "Equitas Small Finance Bank",
+      "aliases": ["equitas", "equitas bank"],
+      "domains": ["equitasbank.com"],
+      "dlt_headers": ["EQUITS", "EQSFBL"] },
+
+    { "id": "ujjivan", "display_name": "Ujjivan Small Finance Bank",
+      "aliases": ["ujjivan", "ujjivan bank"],
+      "domains": ["ujjivansfb.in"],
+      "dlt_headers": ["UJJIVN", "UJSFBL"] },
+
+    { "id": "jana", "display_name": "Jana Small Finance Bank",
+      "aliases": ["jana small finance", "jana bank"],
+      "domains": ["janabank.com"],
+      "dlt_headers": ["JANABK"] },
+
+    { "id": "suryoday", "display_name": "Suryoday Small Finance Bank",
+      "aliases": ["suryoday"],
+      "domains": ["suryodaybank.com"],
+      "dlt_headers": ["SURYDY"] },
+
+    { "id": "esaf", "display_name": "ESAF Small Finance Bank",
+      "aliases": ["esaf"],
+      "domains": ["esafbank.com"],
+      "dlt_headers": ["ESAFBK"] },
+
+    { "id": "utkarsh", "display_name": "Utkarsh Small Finance Bank",
+      "aliases": ["utkarsh bank", "utkarsh small finance"],
+      "domains": ["utkarsh.bank"],
+      "dlt_headers": ["UTKRSH"] },
+
+    { "id": "unity", "display_name": "Unity Small Finance Bank",
+      "aliases": ["unity small finance", "unity bank"],
+      "domains": ["theunitybank.com"],
+      "dlt_headers": ["UNITYB"] },
+
+    { "id": "fincare", "display_name": "Fincare Small Finance Bank",
+      "aliases": ["fincare"],
+      "domains": ["fincarebank.com"],
+      "dlt_headers": ["FINCRE"] },
+
+    { "id": "capital_sfb", "display_name": "Capital Small Finance Bank",
+      "aliases": ["capital small finance"],
+      "domains": ["capitalbank.co.in"],
+      "dlt_headers": ["CAPSFB"] },
+
+    { "id": "shivalik", "display_name": "Shivalik Small Finance Bank",
+      "aliases": ["shivalik bank", "shivalik small finance"],
+      "domains": ["shivalikbank.com"],
+      "dlt_headers": ["SHVLIK"] },
+
+    { "id": "north_east_sfb", "display_name": "North East Small Finance Bank",
+      "aliases": ["north east small finance"],
+      "domains": ["nesfb.com"],
+      "dlt_headers": ["NESFBL"] },
+
+    { "id": "dcb", "display_name": "DCB Bank",
+      "aliases": ["dcb bank", "dcbbank"],
+      "domains": ["dcbbank.com"],
+      "dlt_headers": ["DCBBNK"] },
+
+    { "id": "karnataka_bank", "display_name": "Karnataka Bank",
+      "aliases": ["karnataka bank", "kbl bank"],
+      "domains": ["karnatakabank.com"],
+      "dlt_headers": ["KARBNK", "KBLTD"] },
+
+    { "id": "tmb", "display_name": "Tamilnad Mercantile Bank",
+      "aliases": ["tamilnad mercantile", "tmb bank"],
+      "domains": ["tmb.in"],
+      "dlt_headers": ["TMBANK"] },
+
+    { "id": "csb", "display_name": "CSB Bank",
+      "aliases": ["csb bank", "catholic syrian bank"],
+      "domains": ["csb.co.in"],
+      "dlt_headers": ["CSBBNK"] },
+
+    { "id": "dhanlaxmi", "display_name": "Dhanlaxmi Bank",
+      "aliases": ["dhanlaxmi bank", "dhanbank"],
+      "domains": ["dhanbank.com"],
+      "dlt_headers": ["DHNBNK"] },
+
+    { "id": "jk_bank", "display_name": "Jammu & Kashmir Bank",
+      "aliases": ["jammu and kashmir bank", "j&k bank", "jk bank"],
+      "domains": ["jkbank.com", "jkbank.net"],
+      "dlt_headers": ["JKBANK"] },
+
+    { "id": "nainital", "display_name": "Nainital Bank",
+      "aliases": ["nainital bank"],
+      "domains": ["nainitalbank.co.in"],
+      "dlt_headers": ["NTLBNK"] },
+
+    { "id": "bharat_bank", "display_name": "Bharat Co-operative Bank",
+      "aliases": ["bharat co-operative bank", "bharat cooperative bank"],
+      "domains": ["bharatbank.com"],
+      "dlt_headers": ["BHRTCB"] },
+
+    { "id": "saraswat", "display_name": "Saraswat Bank",
+      "aliases": ["saraswat bank"],
+      "domains": ["saraswatbank.com"],
+      "dlt_headers": ["SRSWAT"] },
+
+    { "id": "cosmos", "display_name": "Cosmos Bank",
+      "aliases": ["cosmos bank"],
+      "domains": ["cosmosbank.com"],
+      "dlt_headers": ["CSMOSB"] },
+
+    { "id": "sc_india", "display_name": "Standard Chartered Bank India",
+      "aliases": ["standard chartered", "sc bank"],
+      "domains": ["sc.com"],
+      "dlt_headers": ["SCBANK", "SCBIND"] },
+
+    { "id": "hsbc_india", "display_name": "HSBC India",
+      "aliases": ["hsbc"],
+      "domains": ["hsbc.co.in", "hsbc.com"],
+      "dlt_headers": ["HSBCIN", "HSBCBK"] },
+
+    { "id": "citi_india", "display_name": "Citibank India",
+      "aliases": ["citibank", "citi bank"],
+      "domains": ["citibank.co.in", "online.citi.com"],
+      "dlt_headers": ["CITIBK", "CITIIN"] },
+
+    { "id": "dbs_india", "display_name": "DBS Bank India",
+      "aliases": ["dbs bank", "digibank"],
+      "domains": ["dbs.com", "dbs.co.in"],
+      "dlt_headers": ["DBSBNK", "DIGIBK"] },
+
+    { "id": "deutsche_india", "display_name": "Deutsche Bank India",
+      "aliases": ["deutsche bank"],
+      "domains": ["deutschebank.co.in", "db.com"],
+      "dlt_headers": ["DBIND"] },
+
+    { "id": "paytm", "display_name": "Paytm",
+      "aliases": ["paytm", "paytm bank", "paytm payments bank"],
+      "domains": ["paytm.com", "paytmbank.com", "paytmmoney.com"],
+      "dlt_headers": ["PAYTMB", "PAYTM", "PYTMPB"] },
+
+    { "id": "phonepe", "display_name": "PhonePe",
+      "aliases": ["phonepe", "phone pe"],
+      "domains": ["phonepe.com"],
+      "dlt_headers": ["PHONPE", "PHONEP"] },
+
+    { "id": "gpay", "display_name": "Google Pay",
+      "aliases": ["google pay", "gpay", "g pay"],
+      "domains": ["pay.google.com", "google.com"],
+      "dlt_headers": ["GOOGLE", "GPAYIN"] },
+
+    { "id": "amazonpay", "display_name": "Amazon Pay",
+      "aliases": ["amazon pay", "amazonpay"],
+      "domains": ["amazon.in", "amazon.com"],
+      "dlt_headers": ["AMAZON", "AMZNIN"] },
+
+    { "id": "bhim", "display_name": "BHIM UPI",
+      "aliases": ["bhim", "bhim upi", "bhim app"],
+      "domains": ["bhimupi.org.in", "npci.org.in"],
+      "dlt_headers": ["BHIMUP", "NPCIBH"] },
+
+    { "id": "mobikwik", "display_name": "MobiKwik",
+      "aliases": ["mobikwik"],
+      "domains": ["mobikwik.com"],
+      "dlt_headers": ["MBKWIK", "MOBIKW"] },
+
+    { "id": "freecharge", "display_name": "Freecharge",
+      "aliases": ["freecharge"],
+      "domains": ["freecharge.in"],
+      "dlt_headers": ["FRCHRG"] },
+
+    { "id": "airtel_bank", "display_name": "Airtel Payments Bank",
+      "aliases": ["airtel payments bank", "airtel bank"],
+      "domains": ["airtel.in"],
+      "dlt_headers": ["AIRTLB", "APBLTD"] },
+
+    { "id": "jio_bank", "display_name": "Jio Payments Bank",
+      "aliases": ["jio payments bank"],
+      "domains": ["jiopaymentsbank.com"],
+      "dlt_headers": ["JIOPMT"] },
+
+    { "id": "razorpay", "display_name": "Razorpay",
+      "aliases": ["razorpay"],
+      "domains": ["razorpay.com"],
+      "dlt_headers": ["RZRPAY", "RAZORP"] },
+
+    { "id": "payu", "display_name": "PayU India",
+      "aliases": ["payu"],
+      "domains": ["payu.in", "payumoney.com"],
+      "dlt_headers": ["PAYUIN"] },
+
+    { "id": "cred", "display_name": "CRED",
+      "aliases": ["cred app", "cred club"],
+      "domains": ["cred.club"],
+      "dlt_headers": ["CREDCL", "CREDIN"] },
+
+    { "id": "slice", "display_name": "Slice",
+      "aliases": ["slice card", "sliceit"],
+      "domains": ["sliceit.com"],
+      "dlt_headers": ["SLICEI"] },
+
+    { "id": "bharatbillpay", "display_name": "Bharat BillPay",
+      "aliases": ["bharat billpay", "bbps"],
+      "domains": ["bharatbillpay.com"],
+      "dlt_headers": ["BBPSIN"] },
+
+    { "id": "airtel", "display_name": "Airtel",
+      "aliases": ["airtel", "bharti airtel"],
+      "domains": ["airtel.in", "airtel.com"],
+      "dlt_headers": ["AIRTEL", "AIRTLD", "ATLINF"] },
+
+    { "id": "jio", "display_name": "Reliance Jio",
+      "aliases": ["jio", "reliance jio", "myjio"],
+      "domains": ["jio.com", "jio.in"],
+      "dlt_headers": ["JIOTEL", "RJIOTL", "JIOINF"] },
+
+    { "id": "vi", "display_name": "Vi (Vodafone Idea)",
+      "aliases": ["vodafone", "vodafone idea", "vi app", "myvi"],
+      "domains": ["myvi.in", "vodafoneidea.com", "vodafone.in"],
+      "dlt_headers": ["VODAFN", "IDEACL", "VIINFO"] },
+
+    { "id": "bsnl", "display_name": "BSNL",
+      "aliases": ["bsnl", "bharat sanchar"],
+      "domains": ["bsnl.co.in", "bsnl.in"],
+      "dlt_headers": ["BSNLIN", "BSNLOF"] },
+
+    { "id": "mtnl", "display_name": "MTNL",
+      "aliases": ["mtnl"],
+      "domains": ["mtnl.net.in", "mtnl.in"],
+      "dlt_headers": ["MTNLIN"] },
+
+    { "id": "income_tax", "display_name": "Income Tax Department",
+      "aliases": ["income tax", "incometax", "it department", "itr refund", "tds refund"],
+      "domains": ["incometax.gov.in", "incometaxindia.gov.in", "tin-nsdl.com"],
+      "dlt_headers": ["ITDEPT", "ITDEFL", "INCTAX"] },
+
+    { "id": "gst", "display_name": "GST Portal",
+      "aliases": ["gst portal", "gstn", "goods and services tax"],
+      "domains": ["gst.gov.in", "gstn.org.in"],
+      "dlt_headers": ["GSTIND", "GSTSYS"] },
+
+    { "id": "uidai", "display_name": "UIDAI (Aadhaar)",
+      "aliases": ["aadhaar", "aadhar", "uidai", "adhaar"],
+      "domains": ["uidai.gov.in", "myaadhaar.uidai.gov.in", "resident.uidai.gov.in"],
+      "dlt_headers": ["UIDAI", "AADHAR"] },
+
+    { "id": "epfo", "display_name": "EPFO",
+      "aliases": ["epfo", "provident fund", "pf account", "uan"],
+      "domains": ["epfindia.gov.in", "unifiedportal-mem.epfindia.gov.in"],
+      "dlt_headers": ["EPFOHO", "EPFIND"] },
+
+    { "id": "digilocker", "display_name": "DigiLocker",
+      "aliases": ["digilocker", "digi locker"],
+      "domains": ["digilocker.gov.in"],
+      "dlt_headers": ["DGLKR"] },
+
+    { "id": "npci", "display_name": "NPCI",
+      "aliases": ["npci", "national payments corporation"],
+      "domains": ["npci.org.in"],
+      "dlt_headers": ["NPCIIN"] },
+
+    { "id": "rbi", "display_name": "Reserve Bank of India",
+      "aliases": ["reserve bank of india", "rbi"],
+      "domains": ["rbi.org.in"],
+      "dlt_headers": ["RBIIND", "RBISAY"] },
+
+    { "id": "sebi", "display_name": "SEBI",
+      "aliases": ["sebi"],
+      "domains": ["sebi.gov.in", "scores.gov.in"],
+      "dlt_headers": ["SEBIIN"] },
+
+    { "id": "trai", "display_name": "TRAI",
+      "aliases": ["trai", "telecom regulatory authority"],
+      "domains": ["trai.gov.in"],
+      "dlt_headers": ["TRAIND"] },
+
+    { "id": "cybercrime", "display_name": "National Cyber Crime Portal",
+      "aliases": ["cybercrime portal", "cyber crime portal", "i4c"],
+      "domains": ["cybercrime.gov.in"],
+      "dlt_headers": ["I4CGOI", "NCRPGO"] },
+
+    { "id": "india_post", "display_name": "India Post",
+      "aliases": ["india post", "indiapost", "speed post", "department of posts"],
+      "domains": ["indiapost.gov.in", "ippbonline.com"],
+      "dlt_headers": ["INDPST", "IPOSTB", "IPPBNK"] },
+
+    { "id": "irctc", "display_name": "IRCTC",
+      "aliases": ["irctc"],
+      "domains": ["irctc.co.in", "irctc.com"],
+      "dlt_headers": ["IRCTCI", "IRCTC"] },
+
+    { "id": "passport", "display_name": "Passport Seva",
+      "aliases": ["passport seva", "passport office"],
+      "domains": ["passportindia.gov.in"],
+      "dlt_headers": ["PSKIND", "PSPIND"] },
+
+    { "id": "parivahan", "display_name": "Parivahan Sewa",
+      "aliases": ["parivahan", "mparivahan", "rto challan", "e-challan", "echallan"],
+      "domains": ["parivahan.gov.in", "echallan.parivahan.gov.in"],
+      "dlt_headers": ["PRVHAN", "ECHLAN"] },
+
+    { "id": "nsdl", "display_name": "Protean (NSDL e-Gov)",
+      "aliases": ["nsdl", "protean egov"],
+      "domains": ["nsdl.co.in", "proteantech.in", "tin-nsdl.com"],
+      "dlt_headers": ["NSDLTN", "PROTEN"] },
+
+    { "id": "cdsl", "display_name": "CDSL",
+      "aliases": ["cdsl"],
+      "domains": ["cdslindia.com"],
+      "dlt_headers": ["CDSLIN"] },
+
+    { "id": "mca", "display_name": "Ministry of Corporate Affairs",
+      "aliases": ["ministry of corporate affairs", "mca portal"],
+      "domains": ["mca.gov.in"],
+      "dlt_headers": ["MCAGOI"] },
+
+    { "id": "pmjay", "display_name": "Ayushman Bharat (PM-JAY)",
+      "aliases": ["ayushman bharat", "pmjay", "ayushman card"],
+      "domains": ["pmjay.gov.in", "beneficiary.nha.gov.in"],
+      "dlt_headers": ["NHAPMJ", "PMJAY"] },
+
+    { "id": "eshram", "display_name": "e-Shram",
+      "aliases": ["eshram", "e-shram", "shram card"],
+      "domains": ["eshram.gov.in"],
+      "dlt_headers": ["ESHRAM"] },
+
+    { "id": "pmkisan", "display_name": "PM-KISAN",
+      "aliases": ["pm kisan", "pmkisan", "kisan samman nidhi"],
+      "domains": ["pmkisan.gov.in"],
+      "dlt_headers": ["PMKSAN", "PMKISN"] },
+
+    { "id": "eci", "display_name": "Election Commission of India",
+      "aliases": ["election commission", "voter id", "voter helpline"],
+      "domains": ["eci.gov.in", "voters.eci.gov.in", "nvsp.in"],
+      "dlt_headers": ["ECIIND", "NVSPIN"] },
+
+    { "id": "mygov", "display_name": "MyGov",
+      "aliases": ["mygov"],
+      "domains": ["mygov.in"],
+      "dlt_headers": ["MYGOVI"] },
+
+    { "id": "nps", "display_name": "National Pension System",
+      "aliases": ["national pension system", "nps account", "cra nsdl"],
+      "domains": ["npscra.nsdl.co.in", "enps.nsdl.com"],
+      "dlt_headers": ["NPSCRA"] },
+
+    { "id": "lic", "display_name": "LIC of India",
+      "aliases": ["lic", "life insurance corporation"],
+      "domains": ["licindia.in", "licindia.com"],
+      "dlt_headers": ["LICIND", "LICOFI"] },
+
+    { "id": "hdfc_life", "display_name": "HDFC Life",
+      "aliases": ["hdfc life"],
+      "domains": ["hdfclife.com"],
+      "dlt_headers": ["HDFCLF", "HDFCLI"] },
+
+    { "id": "sbi_life", "display_name": "SBI Life",
+      "aliases": ["sbi life"],
+      "domains": ["sbilife.co.in"],
+      "dlt_headers": ["SBILIF"] },
+
+    { "id": "icici_pru", "display_name": "ICICI Prudential Life",
+      "aliases": ["icici prudential", "icici pru"],
+      "domains": ["iciciprulife.com"],
+      "dlt_headers": ["IPRULI"] },
+
+    { "id": "bajaj_finserv", "display_name": "Bajaj Finserv",
+      "aliases": ["bajaj finserv", "bajaj finance", "bajaj emi"],
+      "domains": ["bajajfinserv.in", "bajajfinservmarkets.in"],
+      "dlt_headers": ["BAJAJF", "BFLTD", "BAJFIN"] },
+
+    { "id": "muthoot", "display_name": "Muthoot Finance",
+      "aliases": ["muthoot finance", "muthoot"],
+      "domains": ["muthootfinance.com"],
+      "dlt_headers": ["MUTHUT", "MFLTD"] },
+
+    { "id": "manappuram", "display_name": "Manappuram Finance",
+      "aliases": ["manappuram"],
+      "domains": ["manappuram.com"],
+      "dlt_headers": ["MANAPM"] },
+
+    { "id": "tata_capital", "display_name": "Tata Capital",
+      "aliases": ["tata capital"],
+      "domains": ["tatacapital.com"],
+      "dlt_headers": ["TATCAP"] },
+
+    { "id": "shriram", "display_name": "Shriram Finance",
+      "aliases": ["shriram finance", "shriram city union"],
+      "domains": ["shriramfinance.in"],
+      "dlt_headers": ["SHRIRM"] },
+
+    { "id": "hdb", "display_name": "HDB Financial Services",
+      "aliases": ["hdb financial"],
+      "domains": ["hdbfs.com"],
+      "dlt_headers": ["HDBFSL"] },
+
+    { "id": "zerodha", "display_name": "Zerodha",
+      "aliases": ["zerodha", "kite zerodha"],
+      "domains": ["zerodha.com", "kite.zerodha.com"],
+      "dlt_headers": ["ZERODH", "ZRDHA"] },
+
+    { "id": "groww", "display_name": "Groww",
+      "aliases": ["groww"],
+      "domains": ["groww.in"],
+      "dlt_headers": ["GROWWI"] },
+
+    { "id": "upstox", "display_name": "Upstox",
+      "aliases": ["upstox"],
+      "domains": ["upstox.com"],
+      "dlt_headers": ["UPSTOX"] },
+
+    { "id": "angelone", "display_name": "Angel One",
+      "aliases": ["angel one", "angel broking"],
+      "domains": ["angelone.in"],
+      "dlt_headers": ["ANGELB", "ANGLON"] },
+
+    { "id": "policybazaar", "display_name": "Policybazaar",
+      "aliases": ["policybazaar", "policy bazaar"],
+      "domains": ["policybazaar.com"],
+      "dlt_headers": ["PLCYBZ"] },
+
+    { "id": "bluedart", "display_name": "Blue Dart",
+      "aliases": ["blue dart", "bluedart"],
+      "domains": ["bluedart.com"],
+      "dlt_headers": ["BLUDRT", "BDART"] },
+
+    { "id": "delhivery", "display_name": "Delhivery",
+      "aliases": ["delhivery"],
+      "domains": ["delhivery.com"],
+      "dlt_headers": ["DLVRY", "DELHVY"] },
+
+    { "id": "dtdc", "display_name": "DTDC",
+      "aliases": ["dtdc"],
+      "domains": ["dtdc.in", "dtdc.com"],
+      "dlt_headers": ["DTDCIN"] },
+
+    { "id": "fedex", "display_name": "FedEx",
+      "aliases": ["fedex"],
+      "domains": ["fedex.com"],
+      "dlt_headers": ["FEDEXI", "FEDEX"] },
+
+    { "id": "dhl", "display_name": "DHL",
+      "aliases": ["dhl"],
+      "domains": ["dhl.com", "dhl.co.in"],
+      "dlt_headers": ["DHLIND", "DHLEXP"] },
+
+    { "id": "ecom_express", "display_name": "Ecom Express",
+      "aliases": ["ecom express"],
+      "domains": ["ecomexpress.in"],
+      "dlt_headers": ["ECOMEX"] },
+
+    { "id": "xpressbees", "display_name": "XpressBees",
+      "aliases": ["xpressbees"],
+      "domains": ["xpressbees.com"],
+      "dlt_headers": ["XPRSBE"] },
+
+    { "id": "shadowfax", "display_name": "Shadowfax",
+      "aliases": ["shadowfax"],
+      "domains": ["shadowfax.in"],
+      "dlt_headers": ["SHDWFX"] },
+
+    { "id": "amazon", "display_name": "Amazon India",
+      "aliases": ["amazon"],
+      "domains": ["amazon.in", "amazon.com"],
+      "dlt_headers": ["AMAZON", "AMZNIN"] },
+
+    { "id": "flipkart", "display_name": "Flipkart",
+      "aliases": ["flipkart"],
+      "domains": ["flipkart.com"],
+      "dlt_headers": ["FLPKRT", "FKRTIN"] },
+
+    { "id": "myntra", "display_name": "Myntra",
+      "aliases": ["myntra"],
+      "domains": ["myntra.com"],
+      "dlt_headers": ["MYNTRA"] },
+
+    { "id": "meesho", "display_name": "Meesho",
+      "aliases": ["meesho"],
+      "domains": ["meesho.com"],
+      "dlt_headers": ["MEESHO"] },
+
+    { "id": "nykaa", "display_name": "Nykaa",
+      "aliases": ["nykaa"],
+      "domains": ["nykaa.com"],
+      "dlt_headers": ["NYKAA"] },
+
+    { "id": "bigbasket", "display_name": "BigBasket",
+      "aliases": ["bigbasket", "big basket"],
+      "domains": ["bigbasket.com"],
+      "dlt_headers": ["BGBSKT"] },
+
+    { "id": "swiggy", "display_name": "Swiggy",
+      "aliases": ["swiggy"],
+      "domains": ["swiggy.com"],
+      "dlt_headers": ["SWIGGY"] },
+
+    { "id": "zomato", "display_name": "Zomato",
+      "aliases": ["zomato"],
+      "domains": ["zomato.com"],
+      "dlt_headers": ["ZOMATO"] },
+
+    { "id": "ola", "display_name": "Ola",
+      "aliases": ["ola cabs", "olacabs"],
+      "domains": ["olacabs.com"],
+      "dlt_headers": ["OLACAB", "OLAAPP"] },
+
+    { "id": "uber", "display_name": "Uber",
+      "aliases": ["uber"],
+      "domains": ["uber.com"],
+      "dlt_headers": ["UBERIN", "UBER"] },
+
+    { "id": "bses", "display_name": "BSES Delhi",
+      "aliases": ["bses", "bses rajdhani", "bses yamuna"],
+      "domains": ["bsesdelhi.com"],
+      "dlt_headers": ["BSESDL", "BSESRP", "BSESYP"] },
+
+    { "id": "tatapower_ddl", "display_name": "Tata Power Delhi Distribution",
+      "aliases": ["tata power delhi", "tata power ddl"],
+      "domains": ["tatapower-ddl.com"],
+      "dlt_headers": ["TPDDL", "TATPWR"] },
+
+    { "id": "adani_electricity", "display_name": "Adani Electricity",
+      "aliases": ["adani electricity", "adani power bill"],
+      "domains": ["adanielectricity.com"],
+      "dlt_headers": ["ADANIE", "AEMLTD"] },
+
+    { "id": "msedcl", "display_name": "Mahavitaran (MSEDCL)",
+      "aliases": ["mahavitaran", "msedcl", "mahadiscom"],
+      "domains": ["mahadiscom.in"],
+      "dlt_headers": ["MSEDCL", "MAHAVT"] },
+
+    { "id": "bescom", "display_name": "BESCOM",
+      "aliases": ["bescom"],
+      "domains": ["bescom.co.in", "bescom.org"],
+      "dlt_headers": ["BESCOM"] },
+
+    { "id": "tangedco", "display_name": "TANGEDCO (TNEB)",
+      "aliases": ["tangedco", "tneb"],
+      "domains": ["tnebnet.org", "tangedco.gov.in"],
+      "dlt_headers": ["TNEBLD", "TANGED"] },
+
+    { "id": "uppcl", "display_name": "UPPCL",
+      "aliases": ["uppcl", "uttar pradesh power"],
+      "domains": ["uppcl.org", "uppclonline.com"],
+      "dlt_headers": ["UPPCLL", "UPPCL"] },
+
+    { "id": "pspcl", "display_name": "PSPCL",
+      "aliases": ["pspcl", "punjab state power"],
+      "domains": ["pspcl.in"],
+      "dlt_headers": ["PSPCLB"] },
+
+    { "id": "wbsedcl", "display_name": "WBSEDCL",
+      "aliases": ["wbsedcl", "west bengal state electricity"],
+      "domains": ["wbsedcl.in"],
+      "dlt_headers": ["WBSEDC"] },
+
+    { "id": "torrent_power", "display_name": "Torrent Power",
+      "aliases": ["torrent power"],
+      "domains": ["torrentpower.com"],
+      "dlt_headers": ["TORPWR"] },
+
+    { "id": "whatsapp", "display_name": "WhatsApp",
+      "aliases": ["whatsapp"],
+      "domains": ["whatsapp.com", "wa.me"],
+      "dlt_headers": ["WHATSP", "WATSAP"] },
+
+    { "id": "google", "display_name": "Google",
+      "aliases": ["google account", "google security"],
+      "domains": ["google.com", "accounts.google.com"],
+      "dlt_headers": ["GOOGLE"] },
+
+    { "id": "microsoft", "display_name": "Microsoft",
+      "aliases": ["microsoft", "windows support"],
+      "domains": ["microsoft.com", "live.com"],
+      "dlt_headers": ["MSFTIN", "MSAZUR"] },
+
+    { "id": "apple", "display_name": "Apple",
+      "aliases": ["apple id", "icloud"],
+      "domains": ["apple.com", "icloud.com"],
+      "dlt_headers": ["APPLE", "APPLID"] },
+
+    { "id": "netflix", "display_name": "Netflix",
+      "aliases": ["netflix"],
+      "domains": ["netflix.com"],
+      "dlt_headers": ["NTFLIX", "NETFLX"] },
+
+    { "id": "truecaller", "display_name": "Truecaller",
+      "aliases": ["truecaller"],
+      "domains": ["truecaller.com"],
+      "dlt_headers": ["TRUCLR"] },
+
+    { "id": "linkedin", "display_name": "LinkedIn",
+      "aliases": ["linkedin"],
+      "domains": ["linkedin.com"],
+      "dlt_headers": ["LNKDIN"] },
+
+    { "id": "naukri", "display_name": "Naukri.com",
+      "aliases": ["naukri"],
+      "domains": ["naukri.com"],
+      "dlt_headers": ["NAUKRI"] },
+
+    { "id": "indeed", "display_name": "Indeed",
+      "aliases": ["indeed jobs"],
+      "domains": ["indeed.com", "in.indeed.com"],
+      "dlt_headers": ["INDEED"] },
+
+    { "id": "binance", "display_name": "Binance",
+      "aliases": ["binance"],
+      "domains": ["binance.com"],
+      "dlt_headers": ["BINANC"] },
+
+    { "id": "wazirx", "display_name": "WazirX",
+      "aliases": ["wazirx"],
+      "domains": ["wazirx.com"],
+      "dlt_headers": ["WAZIRX"] },
+
+    { "id": "coindcx", "display_name": "CoinDCX",
+      "aliases": ["coindcx"],
+      "domains": ["coindcx.com"],
+      "dlt_headers": ["CNDCX"] }
+  ]
+}
