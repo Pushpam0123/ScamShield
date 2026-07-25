@@ -68,6 +68,16 @@ data class PatternRule(
     val id: String,
     val languages: Set<Language>,
     val regex: Regex,
+    /**
+     * If this matches the message, [regex] is ignored and the rule contributes nothing.
+     *
+     * This exists for one specific and very expensive failure: the most common genuine bank
+     * SMS in India is an OTP delivery that says *"do not share this OTP with anyone"*, and a
+     * plain `share.*otp` pattern fires on it. Encoding the exception as its own field rather
+     * than as a negative lookahead inside [regex] keeps it reviewable — a reader can see what
+     * a rule refuses to fire on without parsing regex. See DECISIONS.md D-010.
+     */
+    val suppressIf: Regex? = null,
     val evidence: EvidenceType,
     val severity: Severity,
     val weight: Float,

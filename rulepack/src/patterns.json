@@ -1,0 +1,683 @@
+{
+  "schema_version": 1,
+  "_comment": [
+    "Structural patterns (design.md §5). The pattern analyzer NEVER forces a verdict — it",
+    "contributes weight and category hints only, and its total is capped at 0.5 so that a",
+    "verbose scam cannot stack a dozen weak patterns and drown out the classifier.",
+    "",
+    "Patterns run against NormalizedMessage.normalized: NFKC, zero-width stripped, whitespace",
+    "collapsed, Locale.ROOT lowercased. Latin patterns are therefore written lowercase and",
+    "need no case flag. Devanagari, Bengali, Tamil and Telugu are caseless.",
+    "",
+    "`suppress_if` is the hard-negative guard. The single most common genuine bank SMS in",
+    "India is an OTP delivery containing the words 'do not share this OTP with anyone'. A",
+    "naive share.*otp pattern fires on it, and design.md §12 requires all 15 genuine bank",
+    "fixtures to return SAFE with zero tolerance. Any rule whose vocabulary overlaps a genuine",
+    "message needs one of these.",
+    "",
+    "Weights are per-rule contributions before the 0.5 cap. They are ordered by how much a hit",
+    "narrows the space of innocent explanations, not by how alarming the wording is: urgency is",
+    "cheap and common in genuine marketing, whereas a request to hand over an OTP has almost no",
+    "innocent reading at all."
+  ],
+
+  "patterns": [
+    {
+      "id": "otp_solicit_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(share|send|tell|provide|forward|give|submit|reply with|revert with)\\s+(?:me\\s+|us\\s+|the\\s+|your\\s+|ur\\s+|this\\s+|that\\s+|it\\s+|a\\s+)*\\b(otp|one\\s?time\\s?password|o\\.t\\.p|pin|cvv|verification code|security code|atm pin)\\b",
+      "suppress_if": "\\b(?:never|do not|don'?t|dont|no one|nobody|not)\\s+(?:\\w+\\s+){0,3}?(?:share|shares|sharing|disclose|reveal|give|tell|ask|asks|request|requests)\\b",
+      "evidence": "OTP_SOLICITATION",
+      "severity": "CRITICAL",
+      "weight": 0.35,
+      "category_hints": { "KYC_PHISHING": 0.4, "UPI_COLLECT": 0.3 }
+    },
+    {
+      "id": "otp_solicit_hi_latn",
+      "lang": ["HI_LATN"],
+      "pattern": "\\b(otp|pin|cvv)\\s+(?:\\w+\\s+){0,2}?(batao|bataye|bata do|bhejo|bhejiye|send karo|share karo|likho|do)\\b",
+      "suppress_if": "\\b(kisi ko|kabhi|mat|na)\\s+(?:\\w+\\s+){0,3}?(share|batao|bataye|de)\\b",
+      "evidence": "OTP_SOLICITATION",
+      "severity": "CRITICAL",
+      "weight": 0.35,
+      "category_hints": { "KYC_PHISHING": 0.4, "UPI_COLLECT": 0.3 }
+    },
+    {
+      "id": "otp_solicit_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(ओटीपी|ओ\\.?टी\\.?पी|पिन|सीवीवी)\\s*(?:\\S+\\s+){0,3}?(शेयर|साझा|बताएं|बताइए|बताओ|भेजें|भेजिए|भेजो)",
+      "suppress_if": "(कभी|किसी को|मत|नहीं)\\s*(?:\\S+\\s+){0,3}?(शेयर|साझा|बताएं|बताइए|बताओ)",
+      "evidence": "OTP_SOLICITATION",
+      "severity": "CRITICAL",
+      "weight": 0.35,
+      "category_hints": { "KYC_PHISHING": 0.4, "UPI_COLLECT": 0.3 }
+    },
+    {
+      "id": "otp_solicit_bn",
+      "lang": ["BN"],
+      "pattern": "(ওটিপি|ও\\.?টি\\.?পি|পিন)\\s*(?:\\S+\\s+){0,3}?(শেয়ার|পাঠান|পাঠিয়ে|বলুন|জানান)",
+      "suppress_if": "(কখনও|কাউকে|করবেন না|না)\\s*(?:\\S+\\s+){0,3}?(শেয়ার|পাঠান|বলুন|জানান)",
+      "evidence": "OTP_SOLICITATION",
+      "severity": "CRITICAL",
+      "weight": 0.35,
+      "category_hints": { "KYC_PHISHING": 0.4, "UPI_COLLECT": 0.3 }
+    },
+    {
+      "id": "otp_solicit_ta",
+      "lang": ["TA"],
+      "pattern": "(ஓடிபி|ஓ\\.?டி\\.?பி|பின்)\\s*(?:\\S+\\s+){0,3}?(பகிர|அனுப்ப|சொல்ல|தெரிவி)",
+      "suppress_if": "(எப்போதும்|யாருடனும்|வேண்டாம்|கூடாது)",
+      "evidence": "OTP_SOLICITATION",
+      "severity": "CRITICAL",
+      "weight": 0.35,
+      "category_hints": { "KYC_PHISHING": 0.4, "UPI_COLLECT": 0.3 }
+    },
+    {
+      "id": "otp_solicit_te",
+      "lang": ["TE"],
+      "pattern": "(ఓటీపీ|ఓ\\.?టి\\.?పి|పిన్)\\s*(?:\\S+\\s+){0,3}?(షేర్|పంపండి|పంపు|చెప్పండి|తెలియజేయండి)",
+      "suppress_if": "(ఎప్పుడూ|ఎవరికీ|వద్దు|కాదు)",
+      "evidence": "OTP_SOLICITATION",
+      "severity": "CRITICAL",
+      "weight": 0.35,
+      "category_hints": { "KYC_PHISHING": 0.4, "UPI_COLLECT": 0.3 }
+    },
+
+    {
+      "id": "upi_collect_approve_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(approve|accept|authorise|authorize|confirm|allow)\\s+(?:the\\s+|this\\s+|my\\s+|a\\s+)*(request|collect request|upi request|payment request|mandate)\\b",
+      "evidence": "UPI_COLLECT_FRAMING",
+      "severity": "CRITICAL",
+      "weight": 0.32,
+      "category_hints": { "UPI_COLLECT": 0.6 }
+    },
+    {
+      "id": "upi_collect_to_receive_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(approve|accept|enter (?:your )?(?:upi )?pin|authorise|authorize)\\b[^.!?]{0,60}?\\b(to (?:get|receive|claim)|and (?:get|receive|claim)|for (?:your )?refund|to credit)\\b",
+      "evidence": "UPI_COLLECT_FRAMING",
+      "severity": "CRITICAL",
+      "weight": 0.35,
+      "category_hints": { "UPI_COLLECT": 0.65 }
+    },
+    {
+      "id": "upi_pin_to_receive_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(?:upi\\s+)?pin\\b[^.!?]{0,40}?\\b(to receive|to get|to claim|for receiving|refund|cashback)\\b",
+      "evidence": "UPI_COLLECT_FRAMING",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "UPI_COLLECT": 0.6 }
+    },
+    {
+      "id": "upi_collect_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(अनुरोध|रिक्वेस्ट|request)\\s*(?:\\S+\\s+){0,3}?(स्वीकार|अप्रूव|मंजूर|एक्सेप्ट)",
+      "evidence": "UPI_COLLECT_FRAMING",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "UPI_COLLECT": 0.6 }
+    },
+    {
+      "id": "upi_collect_hi_latn",
+      "lang": ["HI_LATN"],
+      "pattern": "\\b(request|anurodh)\\s+(?:ko\\s+)?(accept|approve|sweekar|manjoor)\\s*(karke|karo|kare|karein)?\\b",
+      "evidence": "UPI_COLLECT_FRAMING",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "UPI_COLLECT": 0.6 }
+    },
+    {
+      "id": "upi_collect_bn",
+      "lang": ["BN"],
+      "pattern": "(অনুরোধ|রিকোয়েস্ট)\\s*(?:\\S+\\s+){0,3}?(গ্রহণ|অনুমোদন|অ্যাক্সেপ্ট)",
+      "evidence": "UPI_COLLECT_FRAMING",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "UPI_COLLECT": 0.6 }
+    },
+    {
+      "id": "upi_collect_ta",
+      "lang": ["TA"],
+      "pattern": "(கோரிக்கை|ரிக்வெஸ்ட்)\\s*(?:\\S+\\s+){0,3}?(ஏற்று|அங்கீகரி|அப்ரூவ்)",
+      "evidence": "UPI_COLLECT_FRAMING",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "UPI_COLLECT": 0.6 }
+    },
+    {
+      "id": "upi_collect_te",
+      "lang": ["TE"],
+      "pattern": "(అభ్యర్థన|రిక్వెస్ట్)\\s*(?:\\S+\\s+){0,3}?(ఆమోదించండి|అంగీకరించండి|అప్రూవ్)",
+      "evidence": "UPI_COLLECT_FRAMING",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "UPI_COLLECT": 0.6 }
+    },
+
+    {
+      "id": "urgency_hours_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\bwithin\\s+(?:the\\s+next\\s+)?(?:24|48|12|2|3|6)\\s*(?:hrs?|hours?)\\b",
+      "evidence": "URGENCY_DEADLINE",
+      "severity": "WARN",
+      "weight": 0.12,
+      "category_hints": { "KYC_PHISHING": 0.15, "ELECTRICITY_DISCONNECTION": 0.1 }
+    },
+    {
+      "id": "urgency_today_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(today itself|before (?:today|tonight|midnight)|immediately or|urgent(?:ly)? (?:required|action|update)|last (?:chance|warning|reminder)|final (?:notice|warning|reminder)|expires? (?:today|tonight))\\b",
+      "evidence": "URGENCY_DEADLINE",
+      "severity": "WARN",
+      "weight": 0.12,
+      "category_hints": { "KYC_PHISHING": 0.15 }
+    },
+    {
+      "id": "urgency_hi_latn",
+      "lang": ["HI_LATN"],
+      "pattern": "\\b(turant|turnat|abhi|aaj hi|jaldi|shighra|antim mauka|akhri mauka|antim suchna)\\b",
+      "evidence": "URGENCY_DEADLINE",
+      "severity": "WARN",
+      "weight": 0.12,
+      "category_hints": { "KYC_PHISHING": 0.15 }
+    },
+    {
+      "id": "urgency_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(तुरंत|तत्काल|आज ही|अंतिम मौका|आखिरी मौका|अंतिम सूचना|अंतिम चेतावनी|तातडीने|आजच)",
+      "evidence": "URGENCY_DEADLINE",
+      "severity": "WARN",
+      "weight": 0.12,
+      "category_hints": { "KYC_PHISHING": 0.15 }
+    },
+    {
+      "id": "urgency_hours_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(24|48|12)\\s*(घंटे|घंटो|घंटों|तास)\\s*(के\\s*)?(अंदर|भीतर|में|आत)",
+      "evidence": "URGENCY_DEADLINE",
+      "severity": "WARN",
+      "weight": 0.12,
+      "category_hints": { "KYC_PHISHING": 0.15 }
+    },
+    {
+      "id": "urgency_bn",
+      "lang": ["BN"],
+      "pattern": "(অবিলম্বে|এখনই|আজই|শেষ সুযোগ|চূড়ান্ত বিজ্ঞপ্তি|শেষ সতর্কতা)",
+      "evidence": "URGENCY_DEADLINE",
+      "severity": "WARN",
+      "weight": 0.12,
+      "category_hints": { "KYC_PHISHING": 0.15 }
+    },
+    {
+      "id": "urgency_ta",
+      "lang": ["TA"],
+      "pattern": "(உடனடியாக|இன்றே|கடைசி வாய்ப்பு|இறுதி எச்சரிக்கை|உடனே)",
+      "evidence": "URGENCY_DEADLINE",
+      "severity": "WARN",
+      "weight": 0.12,
+      "category_hints": { "KYC_PHISHING": 0.15 }
+    },
+    {
+      "id": "urgency_te",
+      "lang": ["TE"],
+      "pattern": "(వెంటనే|ఈరోజే|చివరి అవకాశం|తుది హెచ్చరిక|తక్షణమే)",
+      "evidence": "URGENCY_DEADLINE",
+      "severity": "WARN",
+      "weight": 0.12,
+      "category_hints": { "KYC_PHISHING": 0.15 }
+    },
+
+    {
+      "id": "threat_account_block_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(account|a/c|acct|card|sim|upi)\\s+(?:will\\s+be\\s+|is\\s+|shall\\s+be\\s+|to\\s+be\\s+|being\\s+)?(block(?:ed)?|suspend(?:ed)?|freez(?:e|ed)|deactivat(?:e|ed)|clos(?:e|ed)|disabl(?:e|ed)|lock(?:ed)?)\\b",
+      "suppress_if": "\\b(?:if you (?:did|do) not recognise|report(?: it)? (?:immediately|to us)|has been blocked (?:as|at) (?:your|per your) request|we have blocked)\\b",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.2,
+      "category_hints": { "KYC_PHISHING": 0.4 }
+    },
+    {
+      "id": "threat_kyc_expiry_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(kyc|k\\.y\\.c|know your customer)\\b[^.!?]{0,50}?\\b(expir\\w+|pending|incomplete|not updated|update|suspend\\w*|verif\\w+)\\b",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.24,
+      "category_hints": { "KYC_PHISHING": 0.7 }
+    },
+    {
+      "id": "threat_legal_arrest_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(arrest warrant|non.?bailable|court summons|legal action will|police (?:case|complaint) (?:has been|will be) (?:filed|registered)|fir (?:has been|will be) (?:filed|registered|lodged)|digital arrest|cbi|narcotics (?:department|control))\\b",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "DIGITAL_ARREST": 0.7 }
+    },
+    {
+      "id": "threat_electricity_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(electricity|power|current)\\b[^.!?]{0,50}?\\b(disconnect\\w*|cut off|will be cut|shut down|discontinu\\w+)\\b",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.26,
+      "category_hints": { "ELECTRICITY_DISCONNECTION": 0.75 }
+    },
+    {
+      "id": "threat_customs_parcel_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(parcel|package|shipment|consignment|courier)\\b[^.!?]{0,60}?\\b(customs|held|seized|detained|stuck|on hold|clearance (?:fee|charge)|undeliverable|address (?:is )?incomplete)\\b",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "WARN",
+      "weight": 0.22,
+      "category_hints": { "COURIER_CUSTOMS": 0.7 }
+    },
+    {
+      "id": "threat_account_block_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(खाता|खाते|अकाउंट|कार्ड|सिम|खाते)\\s*(?:\\S+\\s+){0,4}?(बंद|ब्लॉक|निलंबित|फ्रीज|निष्क्रिय|बंद कर)",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.2,
+      "category_hints": { "KYC_PHISHING": 0.4 }
+    },
+    {
+      "id": "threat_kyc_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(केवाईसी|के\\.?वाय\\.?सी)\\s*(?:\\S+\\s+){0,4}?(समाप्त|एक्सपायर|अपडेट|पूरा|लंबित|अधूरी)",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.24,
+      "category_hints": { "KYC_PHISHING": 0.7 }
+    },
+    {
+      "id": "threat_electricity_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(बिजली|विद्युत|वीज)\\s*(?:\\S+\\s+){0,5}?(कनेक्शन|कट|काट|खंडित|बंद)",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.26,
+      "category_hints": { "ELECTRICITY_DISCONNECTION": 0.75 }
+    },
+    {
+      "id": "threat_legal_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(गिरफ्तारी|वारंट|कानूनी कार्रवाई|मुकदमा|एफआईआर|पुलिस केस|डिजिटल अरेस्ट|अटक)",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "DIGITAL_ARREST": 0.7 }
+    },
+    {
+      "id": "threat_account_block_hi_latn",
+      "lang": ["HI_LATN"],
+      "pattern": "\\b(khata|khaata|account|card)\\s+(?:\\w+\\s+){0,3}?(band|block|blok|nishkriya|freeze|suspend)\\b",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.2,
+      "category_hints": { "KYC_PHISHING": 0.4 }
+    },
+    {
+      "id": "threat_account_block_bn",
+      "lang": ["BN"],
+      "pattern": "(অ্যাকাউন্ট|একাউন্ট|কার্ড|খাতা)\\s*(?:\\S+\\s+){0,4}?(বন্ধ|ব্লক|স্থগিত|নিষ্ক্রিয়)",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.2,
+      "category_hints": { "KYC_PHISHING": 0.4 }
+    },
+    {
+      "id": "threat_electricity_bn",
+      "lang": ["BN"],
+      "pattern": "(বিদ্যুৎ|বিদ্যুত)\\s*(?:\\S+\\s+){0,5}?(সংযোগ|বিচ্ছিন্ন|কেটে|বন্ধ)",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.26,
+      "category_hints": { "ELECTRICITY_DISCONNECTION": 0.75 }
+    },
+    {
+      "id": "threat_account_block_ta",
+      "lang": ["TA"],
+      "pattern": "(கணக்கு|அக்கவுண்ட்|அட்டை)\\s*(?:\\S+\\s+){0,4}?(முடக்க|நிறுத்த|செயலிழக்க|ப்ளாக்)",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.2,
+      "category_hints": { "KYC_PHISHING": 0.4 }
+    },
+    {
+      "id": "threat_electricity_ta",
+      "lang": ["TA"],
+      "pattern": "(மின்|மின்சார)\\s*(?:\\S+\\s+){0,5}?(இணைப்பு|துண்டிக்க|நிறுத்த)",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.26,
+      "category_hints": { "ELECTRICITY_DISCONNECTION": 0.75 }
+    },
+    {
+      "id": "threat_account_block_te",
+      "lang": ["TE"],
+      "pattern": "(ఖాతా|అకౌంట్|కార్డు)\\s*(?:\\S+\\s+){0,4}?(మూసివేయ|బ్లాక్|నిలిపివేయ|నిష్క్రియ)",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.2,
+      "category_hints": { "KYC_PHISHING": 0.4 }
+    },
+    {
+      "id": "threat_electricity_te",
+      "lang": ["TE"],
+      "pattern": "(విద్యుత్|కరెంట్)\\s*(?:\\S+\\s+){0,5}?(కనెక్షన్|తొలగించ|నిలిపివేయ|కట్)",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.26,
+      "category_hints": { "ELECTRICITY_DISCONNECTION": 0.75 }
+    },
+
+    {
+      "id": "reward_lottery_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(lottery|lucky draw|lucky winner|prize money|bumper (?:prize|offer)|jackpot|you have won|you won|congratulations you|selected as (?:the )?winner)\\b",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "CRITICAL",
+      "weight": 0.28,
+      "category_hints": { "LOTTERY_PRIZE": 0.7 }
+    },
+    {
+      "id": "reward_large_amount_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "(?:rs\\.?|inr|₹)\\s?\\d{1,3}(?:,\\d{2,3})*(?:\\.\\d+)?\\s*(lakh|lakhs|lac|crore|crores|cr)\\b",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "WARN",
+      "weight": 0.15,
+      "category_hints": { "LOTTERY_PRIZE": 0.3, "INVESTMENT_TRADING": 0.2 }
+    },
+    {
+      "id": "reward_guaranteed_returns_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(guaranteed (?:return|profit|income)|double your money|(?:daily|weekly|monthly) (?:profit|income|returns?) of|\\d{2,3}\\s?% (?:return|profit|guaranteed)|risk.?free (?:return|profit|investment))\\b",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "INVESTMENT_TRADING": 0.75 }
+    },
+    {
+      "id": "reward_lottery_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(लॉटरी|लकी ड्रॉ|इनाम|पुरस्कार|बंपर|जीत गए|जीते हैं|विजेता चुने)",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "CRITICAL",
+      "weight": 0.28,
+      "category_hints": { "LOTTERY_PRIZE": 0.7 }
+    },
+    {
+      "id": "reward_lottery_hi_latn",
+      "lang": ["HI_LATN"],
+      "pattern": "\\b(lottery|inaam|inam|puraskar|lucky draw|jeet gaye|vijeta)\\b",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "CRITICAL",
+      "weight": 0.28,
+      "category_hints": { "LOTTERY_PRIZE": 0.7 }
+    },
+    {
+      "id": "reward_lottery_bn",
+      "lang": ["BN"],
+      "pattern": "(লটারি|লাকি ড্র|পুরস্কার|জিতেছেন|বিজয়ী)",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "CRITICAL",
+      "weight": 0.28,
+      "category_hints": { "LOTTERY_PRIZE": 0.7 }
+    },
+    {
+      "id": "reward_lottery_ta",
+      "lang": ["TA"],
+      "pattern": "(லாட்டரி|பரிசு|வென்றுள்ளீர்கள்|வெற்றியாளர்|அதிர்ஷ்ட)",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "CRITICAL",
+      "weight": 0.28,
+      "category_hints": { "LOTTERY_PRIZE": 0.7 }
+    },
+    {
+      "id": "reward_lottery_te",
+      "lang": ["TE"],
+      "pattern": "(లాటరీ|బహుమతి|గెలుచుకున్నారు|విజేత|అదృష్ట)",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "CRITICAL",
+      "weight": 0.28,
+      "category_hints": { "LOTTERY_PRIZE": 0.7 }
+    },
+
+    {
+      "id": "advance_fee_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(registration|processing|security|refundable|clearance|customs|handling|activation|verification|convenience)\\s+(fee|charge|deposit|amount)\\b",
+      "evidence": "ADVANCE_FEE_REQUEST",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "FAKE_JOB": 0.3, "LOTTERY_PRIZE": 0.3, "COURIER_CUSTOMS": 0.2, "LOAN_APP": 0.2 }
+    },
+    {
+      "id": "advance_fee_pay_to_get_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(pay|deposit|transfer|send)\\b[^.!?]{0,40}?\\b(to (?:claim|receive|release|get|unlock)|before (?:we can|your) (?:release|credit|deliver))\\b",
+      "evidence": "ADVANCE_FEE_REQUEST",
+      "severity": "CRITICAL",
+      "weight": 0.32,
+      "category_hints": { "LOTTERY_PRIZE": 0.3, "COURIER_CUSTOMS": 0.3, "FAKE_JOB": 0.2 }
+    },
+    {
+      "id": "advance_fee_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(पंजीकरण|रजिस्ट्रेशन|प्रोसेसिंग|सुरक्षा|क्लीयरेंस|सक्रियण)\\s*(शुल्क|फीस|राशि|चार्ज)",
+      "evidence": "ADVANCE_FEE_REQUEST",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "FAKE_JOB": 0.3, "LOTTERY_PRIZE": 0.3 }
+    },
+    {
+      "id": "advance_fee_hi_latn",
+      "lang": ["HI_LATN"],
+      "pattern": "\\b(registration|processing|security|clearance)\\s+(shulk|fees?|charge|rashi)\\b",
+      "evidence": "ADVANCE_FEE_REQUEST",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "FAKE_JOB": 0.3, "LOTTERY_PRIZE": 0.3 }
+    },
+    {
+      "id": "advance_fee_bn",
+      "lang": ["BN"],
+      "pattern": "(নিবন্ধন|রেজিস্ট্রেশন|প্রসেসিং|নিরাপত্তা)\\s*(ফি|চার্জ|টাকা)",
+      "evidence": "ADVANCE_FEE_REQUEST",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "FAKE_JOB": 0.3, "LOTTERY_PRIZE": 0.3 }
+    },
+    {
+      "id": "advance_fee_ta",
+      "lang": ["TA"],
+      "pattern": "(பதிவு|செயலாக்க|பாதுகாப்பு)\\s*(கட்டணம்|கட்டண|தொகை)",
+      "evidence": "ADVANCE_FEE_REQUEST",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "FAKE_JOB": 0.3, "LOTTERY_PRIZE": 0.3 }
+    },
+    {
+      "id": "advance_fee_te",
+      "lang": ["TE"],
+      "pattern": "(నమోదు|రిజిస్ట్రేషన్|ప్రాసెసింగ్|భద్రతా)\\s*(రుసుము|ఫీజు|మొత్తం|ఛార్జ్)",
+      "evidence": "ADVANCE_FEE_REQUEST",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "FAKE_JOB": 0.3, "LOTTERY_PRIZE": 0.3 }
+    },
+
+    {
+      "id": "fake_job_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(work from home|part.?time job|daily (?:income|earning|payout)|earn (?:rs\\.?|inr|₹)?\\s?\\d{3,}(?:\\s?(?:daily|per day|a day|per task))|no (?:experience|interview) (?:required|needed)|hiring (?:immediately|urgently)|task (?:based )?(?:job|work))\\b",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "WARN",
+      "weight": 0.22,
+      "category_hints": { "FAKE_JOB": 0.7 }
+    },
+    {
+      "id": "fake_job_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(घर बैठे|घर से काम|पार्ट टाइम|रोज़ाना कमाई|रोजाना कमाई|बिना अनुभव|तुरंत नौकरी)",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "WARN",
+      "weight": 0.22,
+      "category_hints": { "FAKE_JOB": 0.7 }
+    },
+    {
+      "id": "fake_job_hi_latn",
+      "lang": ["HI_LATN"],
+      "pattern": "\\b(ghar baithe|ghar se kaam|part time kaam|rozana kamai|bina anubhav)\\b",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "WARN",
+      "weight": 0.22,
+      "category_hints": { "FAKE_JOB": 0.7 }
+    },
+
+    {
+      "id": "loan_instant_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(instant loan|loan (?:approved|sanctioned) (?:in|within)|no (?:documents?|kyc|cibil) (?:required|needed)|loan without (?:documents?|security)|pre.?approved loan of)\\b",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "WARN",
+      "weight": 0.2,
+      "category_hints": { "LOAN_APP": 0.7 }
+    },
+    {
+      "id": "loan_instant_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(तुरंत लोन|तत्काल ऋण|बिना दस्तावेज|बिना सिबिल|लोन मंजूर)",
+      "evidence": "UNREALISTIC_REWARD",
+      "severity": "WARN",
+      "weight": 0.2,
+      "category_hints": { "LOAN_APP": 0.7 }
+    },
+
+    {
+      "id": "tech_support_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(install (?:anydesk|teamviewer|quicksupport|rustdesk)|share (?:your )?screen|remote (?:access|support) (?:app|tool)|call (?:this )?(?:toll.?free )?number (?:immediately|now)|your (?:computer|device|account) (?:is|has been) (?:infected|hacked|compromised))\\b",
+      "evidence": "OTP_SOLICITATION",
+      "severity": "CRITICAL",
+      "weight": 0.28,
+      "category_hints": { "TECH_SUPPORT": 0.7 }
+    },
+    {
+      "id": "sextortion_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(your (?:private |intimate |nude )?(?:video|photo|footage)s? (?:has|have) been (?:recorded|leaked)|i have (?:recorded|access to) your (?:camera|webcam|screen)|will (?:send|share|upload) (?:the )?(?:video|photos?) to (?:your |all )?(?:contacts|friends|family))\\b",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.32,
+      "category_hints": { "SEXTORTION": 0.8 }
+    },
+
+    {
+      "id": "premium_rate_number",
+      "lang": ["EN", "HI", "HI_LATN", "BN", "TA", "TE", "MR"],
+      "pattern": "\\b(?:1[89]00|140)[\\s.-]?\\d{2,3}[\\s.-]?\\d{3,4}\\b",
+      "evidence": "PREMIUM_RATE_NUMBER",
+      "severity": "WARN",
+      "weight": 0.1,
+      "category_hints": { "TECH_SUPPORT": 0.2 }
+    },
+    {
+      "id": "call_back_number_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(call|whatsapp|contact|dial|msg|message)\\s+(?:us\\s+|me\\s+|on\\s+|at\\s+)*(?:\\+?91[\\s-]?)?[6-9]\\d{9}\\b",
+      "evidence": "PREMIUM_RATE_NUMBER",
+      "severity": "WARN",
+      "weight": 0.16,
+      "category_hints": { "TECH_SUPPORT": 0.3, "FAKE_JOB": 0.2, "LOAN_APP": 0.2 }
+    },
+
+    {
+      "id": "crypto_wallet_btc",
+      "lang": ["EN", "HI", "HI_LATN", "BN", "TA", "TE", "MR"],
+      "pattern": "\\b(?:bc1[a-z0-9]{25,62}|[13][a-km-zA-HJ-NP-Z1-9]{25,34})\\b",
+      "evidence": "CRYPTO_WALLET_ADDRESS",
+      "severity": "CRITICAL",
+      "weight": 0.25,
+      "category_hints": { "SEXTORTION": 0.4, "INVESTMENT_TRADING": 0.3 }
+    },
+    {
+      "id": "crypto_wallet_eth",
+      "lang": ["EN", "HI", "HI_LATN", "BN", "TA", "TE", "MR"],
+      "pattern": "\\b0x[a-f0-9]{40}\\b",
+      "evidence": "CRYPTO_WALLET_ADDRESS",
+      "severity": "CRITICAL",
+      "weight": 0.25,
+      "category_hints": { "SEXTORTION": 0.4, "INVESTMENT_TRADING": 0.3 }
+    },
+    {
+      "id": "crypto_mention_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(bitcoin|btc|usdt|tether|crypto (?:wallet|payment)|binance (?:pay|wallet))\\b[^.!?]{0,40}?\\b(send|transfer|pay|deposit)\\b",
+      "evidence": "CRYPTO_WALLET_ADDRESS",
+      "severity": "WARN",
+      "weight": 0.18,
+      "category_hints": { "INVESTMENT_TRADING": 0.5, "SEXTORTION": 0.2 }
+    },
+
+    {
+      "id": "credential_request_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(enter|update|confirm|verify|re.?submit|provide)\\b[^.!?]{0,40}?\\b(account number|debit card|credit card|card number|net ?banking (?:id|password|credentials)|user ?id and password|aadhaar number|pan (?:card )?number)\\b",
+      "evidence": "OTP_SOLICITATION",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "KYC_PHISHING": 0.7 }
+    },
+    {
+      "id": "credential_request_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(खाता संख्या|कार्ड नंबर|डेबिट कार्ड|क्रेडिट कार्ड|नेट बैंकिंग|आधार नंबर|पैन नंबर)\\s*(?:\\S+\\s+){0,4}?(दर्ज|अपडेट|भरें|दें|सत्यापित)",
+      "evidence": "OTP_SOLICITATION",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "KYC_PHISHING": 0.7 }
+    },
+    {
+      "id": "link_click_imperative_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\b(click|tap|open|visit)\\s+(?:on\\s+)?(?:the\\s+|this\\s+|below\\s+|following\\s+)*(link|url|website)\\b[^.!?]{0,40}?\\b(to (?:update|verify|activate|unblock|reactivate|claim|avoid)|immediately|urgent)\\b",
+      "evidence": "URGENCY_DEADLINE",
+      "severity": "WARN",
+      "weight": 0.16,
+      "category_hints": { "KYC_PHISHING": 0.4 }
+    },
+    {
+      "id": "link_click_imperative_hi",
+      "lang": ["HI", "MR"],
+      "pattern": "(लिंक|कड़ी)\\s*(?:\\S+\\s+){0,3}?(क्लिक|खोलें|दबाएं|टच)",
+      "evidence": "URGENCY_DEADLINE",
+      "severity": "WARN",
+      "weight": 0.16,
+      "category_hints": { "KYC_PHISHING": 0.4 }
+    },
+    {
+      "id": "reply_yes_to_confirm_en",
+      "lang": ["EN", "HI_LATN"],
+      "pattern": "\\breply\\s+(?:with\\s+)?(?:y|yes|1|ok)\\b[^.!?]{0,40}?\\b(to (?:confirm|stop|cancel|verify|continue|activate))\\b",
+      "evidence": "URGENCY_DEADLINE",
+      "severity": "INFO",
+      "weight": 0.08,
+      "category_hints": { "KYC_PHISHING": 0.2 }
+    },
+    {
+      "id": "apk_download_en",
+      "lang": ["EN", "HI", "HI_LATN", "BN", "TA", "TE", "MR"],
+      "pattern": "\\.apk\\b|\\b(download|install)\\s+(?:the\\s+|this\\s+|our\\s+)?(?:new\\s+)?(app|apk|application)\\b[^.!?]{0,40}?\\b(to (?:update|verify|complete|activate|continue)|immediately|urgent)\\b",
+      "evidence": "THREAT_OF_LOSS",
+      "severity": "CRITICAL",
+      "weight": 0.3,
+      "category_hints": { "KYC_PHISHING": 0.4, "LOAN_APP": 0.3, "TECH_SUPPORT": 0.2 }
+    }
+  ]
+}
