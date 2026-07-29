@@ -39,6 +39,7 @@ ml/artifacts/
 
 # Generated rulepack output (built by rulepack/build_rulepack.py)
 app/src/main/assets/rulepack/
+rulepack/.cache/
 
 # Model artifacts (large; produced by ml/ pipeline)
 app/src/main/assets/model/

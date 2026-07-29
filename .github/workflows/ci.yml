@@ -38,10 +38,15 @@ jobs:
 
       # Rules are data (architecture.md §11). The pack is compiled from rulepack/src and
       # the build fails on an invalid pack — a partially-loaded pack must never ship.
+      #
+      # --skip-reputation-fetch: CI validates schema and cross-file invariants, not the
+      # live Tranco download (see DECISIONS.md D-011) — a flaky external fetch should not
+      # fail an unrelated PR. A real release build must run build_rulepack.py without this
+      # flag so reputation.bin ships a populated Bloom filter, not an allowlist-only one.
       - name: Build rule pack
         run: |
           python3 -m pip install --quiet jsonschema
-          python3 rulepack/build_rulepack.py
+          python3 rulepack/build_rulepack.py --skip-reputation-fetch
 
       - name: Unit tests
         run: ./gradlew test --stacktrace

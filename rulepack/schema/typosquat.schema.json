@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://scamshield/rulepack/typosquat.schema.json",
+  "title": "typosquat.json",
+  "type": "object",
+  "required": ["schema_version", "single_char_folds", "sequence_folds", "distance", "suspicious_tlds"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "_comment": { "type": "array", "items": { "type": "string" } },
+    "single_char_folds": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1,
+        "pattern": "^[a-z0-9]$"
+      },
+      "propertyNames": { "minLength": 1, "maxLength": 1 }
+    },
+    "sequence_folds": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "minLength": 1 }
+    },
+    "_sequence_folds_comment": { "type": "array", "items": { "type": "string" } },
+    "distance": {
+      "type": "object",
+      "required": ["short_label_max_length", "short_label_distance", "long_label_distance"],
+      "additionalProperties": false,
+      "properties": {
+        "short_label_max_length": { "type": "integer", "minimum": 1 },
+        "short_label_distance": { "type": "integer", "minimum": 0 },
+        "long_label_distance": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "_distance_comment": { "type": "array", "items": { "type": "string" } },
+    "suspicious_tlds": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "pattern": "^[a-z]{2,24}$" }
+    },
+    "_suspicious_tlds_comment": { "type": "array", "items": { "type": "string" } }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://scamshield/rulepack/shorteners.schema.json",
+  "title": "shorteners.json",
+  "type": "object",
+  "required": ["schema_version", "shorteners"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "_comment": { "type": "array", "items": { "type": "string" } },
+    "shorteners": {
+      "type": "array",
+      "minItems": 40,
+      "items": { "type": "string", "pattern": "^[a-z0-9.-]+\\.[a-z]{2,}$" }
+    },
+    "brand_operated": {
+      "type": "object",
+      "additionalProperties": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+    }
+  }
+}
