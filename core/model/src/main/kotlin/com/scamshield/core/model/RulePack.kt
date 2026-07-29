@@ -14,6 +14,15 @@ data class RulePack(
     val meta: PackMeta,
     val banks: List<BankEntry>,
     val shorteners: Set<String>,
+    /**
+     * Shortener domains a known brand operates itself (`amzn.to` -> `amazon`), keyed by
+     * shortener domain. `design.md` §3.4 flags a shortener host as `URL_SHORTENER`, `WARN` —
+     * but a brand's own shortener on a genuine message from that brand is a false-positive
+     * with no upside, so the URL analyzer skips the warning when the matched brand id here
+     * equals a brand the message actually claims to be from. See `shorteners.json`'s own
+     * authoring comment for why this map is kept deliberately short.
+     */
+    val shortenerBrandOperated: Map<String, String>,
     val confusables: ConfusableTable,
     val patterns: List<PatternRule>,
     val suspiciousTlds: Set<String>,
