@@ -107,4 +107,15 @@ interface DomainReputationIndex {
 interface PublicSuffixList {
     /** Returns eTLD+1 for [host], or null if [host] is an IP literal or has no registrable part. */
     fun registrableDomain(host: String): String?
+
+    /**
+     * True if [label] is itself a recognized public suffix on its own (e.g. `"com"`, `"in"`,
+     * `"xyz"`). Used by bare-domain URL extraction (`design.md` §2.2) to decide whether an
+     * unscheme'd, unprefixed candidate like `sbi-verify.xyz/kyc` is plausibly a real domain
+     * rather than two words in a sentence that happen to be separated by a period — without
+     * that check, ordinary prose ("no.of", "e.g") would be extracted as URLs, since
+     * [registrableDomain] itself always resolves *something* for an unlisted TLD by design
+     * (the Public Suffix List's own fallback rule).
+     */
+    fun isRecognizedTld(label: String): Boolean
 }

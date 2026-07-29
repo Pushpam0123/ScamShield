@@ -95,6 +95,19 @@ class PublicSuffixListParserTest {
     }
 
     @Test
+    fun `isRecognizedTld is true only for a genuine plain single-label suffix rule`() {
+        assertThat(psl.isRecognizedTld("com")).isTrue()
+        assertThat(psl.isRecognizedTld("in")).isTrue()
+        assertThat(psl.isRecognizedTld("COM")).isTrue() // case-insensitive
+        // "co.in" and "gov.in" are two-label rules in this fixture, not single-label ones.
+        assertThat(psl.isRecognizedTld("co")).isFalse()
+        assertThat(psl.isRecognizedTld("gov")).isFalse()
+        // Ordinary words are not suffixes, however domain-shaped the surrounding text looks.
+        assertThat(psl.isRecognizedTld("of")).isFalse()
+        assertThat(psl.isRecognizedTld("xyz")).isFalse()
+    }
+
+    @Test
     fun `punycode host is treated as ascii directly`() {
         assertThat(psl.registrableDomain("xn--sb-xkc.com")).isEqualTo("xn--sb-xkc.com")
     }

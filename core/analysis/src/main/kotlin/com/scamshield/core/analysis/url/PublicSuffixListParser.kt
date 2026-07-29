@@ -68,6 +68,12 @@ class PublicSuffixListParser private constructor(
         return trailingLabelsPlusOne(asciiHost, suffixLabelCount)
     }
 
+    override fun isRecognizedTld(label: String): Boolean {
+        val normalized = label.trim().lowercase(Locale.ROOT)
+        if (normalized.isEmpty()) return false
+        return listOf(normalized) in plainRules
+    }
+
     /** A rule's labels, right-aligned against the host's labels, `*` matching any one label. */
     private fun matches(ruleLabels: List<String>, hostLabels: List<String>): Boolean {
         if (ruleLabels.size > hostLabels.size) return false
