@@ -103,6 +103,14 @@ val checkApkSize = tasks.register("checkApkSize") {
     }
 }
 
+// The rule pack is generated output (root build.gradle.kts's `buildRulepack` task) and is
+// gitignored, not committed — a fresh checkout has no app/src/main/assets/rulepack until this
+// runs once. Wiring it into `preBuild` means an ordinary `./gradlew build` regenerates it
+// automatically instead of silently packaging a stale or missing pack.
+tasks.named("preBuild") {
+    dependsOn(rootProject.tasks.named("buildRulepack"))
+}
+
 dependencies {
     // architecture.md §5 — :app is the only module that may see analyzer *implementations*.
     // It binds them to interfaces via Hilt so that :core:analysis stays implementation-blind.
