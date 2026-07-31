@@ -35,10 +35,7 @@ from pathlib import Path
 try:
     import jsonschema
 except ImportError:  # pragma: no cover
-    sys.exit(
-        "jsonschema is required: python3 -m pip install jsonschema\n"
-        "(see HANDOFF.md open problem #1)"
-    )
+    sys.exit("jsonschema is required: python3 -m pip install jsonschema")
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "rulepack" / "src"

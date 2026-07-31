@@ -52,12 +52,6 @@ progress.
   product on its own; the model is meant to be an enhancement, not a dependency.
 - **Every verdict comes with a reason.** No unexplained "72% scam" numbers.
 
-## Docs
-
-The `docs/` folder has the actual design and build spec this project follows — architecture,
-algorithms, ML pipeline, and the phase-by-phase build plan, if you want the full detail. There's
-also `DECISIONS.md`, a running log of judgment calls made where the spec left something open.
-
 ## Building
 
 Requires JDK 17+ and the Android SDK (platform 35, build-tools 35).
