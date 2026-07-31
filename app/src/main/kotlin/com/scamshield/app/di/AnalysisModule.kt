@@ -56,17 +56,21 @@ object AnalysisModule {
     fun providePatternAnalyzer(loadedRulePack: LoadedRulePack): PatternAnalyzer =
         PatternAnalyzer(loadedRulePack.rulePack.patterns)
 
+    // `List<Analyzer>` needs @JvmSuppressWildcards at both ends of this binding: Kotlin's
+    // `List<out E>` declaration-site variance otherwise makes javac-generated Dagger code see
+    // `List<? extends Analyzer>` from one of these two signatures and `List<Analyzer>` from the
+    // other, which Dagger treats as two different binding keys ("MissingBinding").
     @Provides
     @Singleton
     fun provideAnalyzers(
         urlAnalyzer: UrlAnalyzer,
         senderAnalyzer: SenderAnalyzer,
         patternAnalyzer: PatternAnalyzer,
-    ): List<Analyzer> = listOf(urlAnalyzer, senderAnalyzer, patternAnalyzer)
+    ): List<@JvmSuppressWildcards Analyzer> = listOf(urlAnalyzer, senderAnalyzer, patternAnalyzer)
 
     @Provides
     @Singleton
-    fun provideOrchestrator(analyzers: List<Analyzer>): Orchestrator = Orchestrator(analyzers)
+    fun provideOrchestrator(analyzers: List<@JvmSuppressWildcards Analyzer>): Orchestrator = Orchestrator(analyzers)
 
     @Provides
     @Singleton
