@@ -25,6 +25,14 @@ android {
 // RDAP lookup all live here precisely so that the boundary is one module wide and testable.
 dependencies {
     api(projects.core.model)
+    // Both are plain JVM modules with pure, already-tested parsing logic that rule-pack
+    // loading needs: PublicSuffixListParser (PSL algorithm) and BloomDomainReputationIndex
+    // (reputation.bin's Bloom filter). Their own doc comments name `:core:data` as the owner
+    // of asset I/O and fallback decisions around them -- reusing them here instead of
+    // re-implementing either (both are correctness-subtle: see HANDOFF's own account of the
+    // Bloom filter's BigInteger overflow bug) is safer than a second hand-rolled copy.
+    implementation(projects.core.analysis)
+    implementation(projects.analyzer.url)
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)

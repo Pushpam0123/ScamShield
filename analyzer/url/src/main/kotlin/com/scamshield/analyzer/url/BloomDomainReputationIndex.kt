@@ -32,8 +32,13 @@ import java.security.MessageDigest
  * overflow. A `Long`-only port here would silently disagree with the Python-built filter for
  * every domain requiring more than one hash round -- verified against real SHA-256 output
  * before writing this comment, not assumed.
+ *
+ * Public, not `internal`: `:core:data` owns the fallback decision described on [parse] below
+ * (constructing the pack as a whole, deciding what happens when this returns null), and needs
+ * to call this constructor across the module boundary to do it -- see that module's
+ * `RulePackLoader`.
  */
-internal class BloomDomainReputationIndex private constructor(
+class BloomDomainReputationIndex private constructor(
     private val bitArray: ByteArray,
     private val m: Int,
     private val k: Int,
