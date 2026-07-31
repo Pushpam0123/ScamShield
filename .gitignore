@@ -43,3 +43,7 @@ rulepack/.cache/
 
 # Model artifacts (large; produced by ml/ pipeline)
 app/src/main/assets/model/
+
+# Session handoff notes: local-only, never pushed (repo keeps README.md as the only
+# tracked markdown file).
+HANDOFF.md
