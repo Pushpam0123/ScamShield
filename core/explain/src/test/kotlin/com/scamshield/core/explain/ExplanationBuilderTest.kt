@@ -116,4 +116,11 @@ class ExplanationBuilderTest {
         assertThat(explanation.topEvidence).hasSize(1)
         assertThat(explanation.remainingEvidenceCount).isEqualTo(0)
     }
+
+    @Test
+    fun `allEvidence carries every rendered item, not just the top 3 -- needed for 'show all'`() {
+        val evidence = (1..5).map { Evidence(EvidenceType.OTP_SOLICITATION, Severity.CRITICAL) }
+        val explanation = builder.explain(result(evidence = evidence))
+        assertThat(explanation.allEvidence).hasSize(5)
+    }
 }

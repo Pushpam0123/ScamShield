@@ -15,10 +15,18 @@ import com.scamshield.core.model.Verdict
  * `:app` cover this), so what belongs here is the evidence list and the action block.
  */
 data class ResultExplanation(
-    val topEvidence: List<String>,
-    val remainingEvidenceCount: Int,
+    /** Rendered evidence, already in `AnalysisResult.evidence`'s severity/weight order. */
+    val allEvidence: List<String>,
     val actionItems: List<String>,
-)
+) {
+    /** The Result screen's default view, before "show all reasons" is tapped. */
+    val topEvidence: List<String> get() = allEvidence.take(TOP_EVIDENCE_COUNT)
+    val remainingEvidenceCount: Int get() = (allEvidence.size - TOP_EVIDENCE_COUNT).coerceAtLeast(0)
+
+    private companion object {
+        const val TOP_EVIDENCE_COUNT = 3
+    }
+}
 
 /**
  * Renders [Evidence] and [AnalysisResult] into English strings (Phase 5 adds the other six
@@ -33,14 +41,10 @@ data class ResultExplanation(
  */
 class ExplanationBuilder(private val context: Context) {
 
-    fun explain(result: AnalysisResult): ResultExplanation {
-        val rendered = result.evidence.map(::evidenceText)
-        return ResultExplanation(
-            topEvidence = rendered.take(TOP_EVIDENCE_COUNT),
-            remainingEvidenceCount = (rendered.size - TOP_EVIDENCE_COUNT).coerceAtLeast(0),
-            actionItems = actionItems(result.verdict, result.category),
-        )
-    }
+    fun explain(result: AnalysisResult): ResultExplanation = ResultExplanation(
+        allEvidence = result.evidence.map(::evidenceText),
+        actionItems = actionItems(result.verdict, result.category),
+    )
 
     fun evidenceText(evidence: Evidence): String {
         val slots = evidence.slots
@@ -118,8 +122,6 @@ class ExplanationBuilder(private val context: Context) {
     }
 
     companion object {
-        private const val TOP_EVIDENCE_COUNT = 3
-
         private val UNIVERSAL_ACTIONS = listOf(
             R.string.action_do_not_click,
             R.string.action_do_not_share_otp,
