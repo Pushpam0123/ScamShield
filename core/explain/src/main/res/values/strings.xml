@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  design.md §8: one explanation template per EvidenceType, plus one action-block lead-in per
+  ScamCategory, English only for Phase 1 (§10.4 — the other 6 languages are Phase 5).
+
+  Copy rules, enforced in review:
+    - never say "safe" unqualified
+    - never blame the user
+    - reading level <= grade 6, short sentences, no jargon
+      ("fake website", not "phishing"; "web address", not "domain")
+
+  These belong to :core:explain, not :app: ExplanationBuilder resolves them via its own
+  module's R class, and a library module cannot depend on the app that consumes it.
+-->
+<resources>
+    <!-- Evidence templates. Slot order matches ExplanationBuilder's own per-type argument list. -->
+    <string name="ev_domain_very_new_unknown_age">We could not find any history for this
+        website. Real banks and government services have used their websites for many years.</string>
+    <string name="ev_domain_very_new_with_age">This website was created only %1$s days ago.
+        Real banks and government services have used their websites for many years.</string>
+    <string name="ev_typosquat">This link goes to <b>%1$s</b>, which is made to look like the
+        real %2$s website. The real address is <b>%3$s</b>.</string>
+    <string name="ev_homograph">The web address <b>%1$s</b> uses letters that look like normal
+        English letters but are not. This is a common trick to fool your eyes.</string>
+    <string name="ev_url_shortener">The link <b>%1$s</b> is a shortened link. We cannot see
+        where it actually leads before you tap it.</string>
+    <string name="ev_link_text_mismatch">The message shows the address <b>%1$s</b>, but the
+        link actually goes to <b>%2$s</b> instead.</string>
+    <string name="ev_ip_address_host">This link goes straight to a set of numbers
+        (<b>%1$s</b>) instead of a normal web address. Real banks and services do not do this.</string>
+    <string name="ev_suspicious_tld">The web address ends in <b>.%1$s</b>, an ending that is
+        often used for fake websites.</string>
+    <string name="ev_non_https_credential_page">This link is not secured, and it asks for
+        details like a password or OTP. A genuine bank page would not ask this way.</string>
+    <string name="ev_brand_claim_without_dlt">This message claims to be from a company, but it
+        did not come from a verified business number.</string>
+    <string name="ev_unregistered_numeric_sender">This message claims to be from a company, but
+        it came from an ordinary 10-digit mobile number, not a verified business number.</string>
+    <string name="ev_dlt_header_mismatch">This message claims to be from <b>%1$s</b>, but it
+        was actually sent using a business number registered to <b>%2$s</b>.</string>
+    <string name="ev_otp_solicitation">This message asks you to share an OTP, PIN, or CVV.
+        No genuine bank or company ever asks for this.</string>
+    <string name="ev_upi_collect_framing">This message talks about approving a payment request
+        to \"receive\" money. Approving a UPI request always sends money out, never in.</string>
+    <string name="ev_urgency_deadline">This message pushes you to act right now, before you
+        have time to think it over. That pressure is a common scam tactic.</string>
+    <string name="ev_threat_of_loss">This message threatens that something bad will happen —
+        your account blocked, your power cut, or legal action — unless you act immediately.</string>
+    <string name="ev_unrealistic_reward">This message promises a prize, lottery, or reward that
+        is too good to be true, especially since you never entered anything.</string>
+    <string name="ev_premium_rate_number">This message includes a number that may charge you
+        extra just for calling or texting it.</string>
+    <string name="ev_crypto_wallet_address">This message includes a cryptocurrency wallet
+        address. Genuine banks and services never ask for payment this way.</string>
+    <string name="ev_advance_fee_request">This message asks you to pay a fee first, before you
+        can receive a job, prize, or loan. Genuine offers never work this way.</string>
+    <string name="ev_model_high_scam_score">Our on-device model finds this message very similar
+        to known scam messages.</string>
+    <string name="ev_model_low_scam_score">Our on-device model finds this message similar to
+        ordinary, genuine messages.</string>
+
+    <!-- Action block: one lead-in per ScamCategory, then four items always shown for a SCAM or
+         SUSPICIOUS verdict. -->
+    <string name="action_kyc_phishing">Do not enter your bank or KYC details on this link.</string>
+    <string name="action_fake_job">Genuine employers never ask you to pay to get hired.</string>
+    <string name="action_lottery_prize">You cannot win a lottery or contest you never entered.</string>
+    <string name="action_digital_arrest">No police officer or government agency arrests
+        anyone over a phone call or video call.</string>
+    <string name="action_courier_customs">Genuine courier and customs fees are never collected
+        by asking you to click a link and pay online.</string>
+    <string name="action_loan_app">Be careful with loan apps that ask for large permissions on
+        your phone or an upfront fee before lending anything.</string>
+    <string name="action_upi_collect">Never approve a UPI request from someone you do not know.
+        Approving it sends your money to them.</string>
+    <string name="action_investment_trading">Be very cautious of investment plans that promise
+        guaranteed or unusually high returns.</string>
+    <string name="action_tech_support">A genuine company will never call you out of the blue
+        asking for remote access to your device.</string>
+    <string name="action_sextortion">Do not pay. Do not respond. Save the evidence and report it.</string>
+    <string name="action_electricity_disconnection">Contact your electricity board directly
+        using the number on a past bill, not a number from this message.</string>
+    <string name="action_other_scam">Do not act on this message until you have checked it
+        another way.</string>
+    <string name="action_do_not_click">Do not click any link in this message.</string>
+    <string name="action_do_not_share_otp">Never share an OTP, PIN, or CVV with anyone, even
+        someone who says they are calling from your bank.</string>
+    <string name="action_verify_by_calling">If you want to check, call the number printed on
+        your bank card or bill — not any number from this message.</string>
+    <string name="action_report_cybercrime">You can report this at cybercrime.gov.in or by
+        calling 1930.</string>
+</resources>
