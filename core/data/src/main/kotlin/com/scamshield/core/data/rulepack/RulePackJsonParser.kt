@@ -64,7 +64,17 @@ internal object RulePackJsonParser {
         val dto = json.decodeFromString<TyposquatFileDto>(text)
         checkSchemaVersion("typosquat.json", dto.schemaVersion)
         val table = ConfusableTable(
-            singleCharFolds = dto.singleCharFolds.entries.associate { (k, v) -> k.single() to v.single() },
+            // `:core:model`'s ConfusableTable.singleCharFolds is Map<Char, Char> -- one UTF-16
+            // code unit -- but typosquat.json's schema measures "one character" in Unicode code
+            // points the way Python's `len()` does (build_rulepack.py's validator is Python).
+            // A handful of authored folds (the Mathematical Sans-Serif Bold confusables, e.g.
+            // U+1D5EE) are single code points outside the Basic Multilingual Plane, which Kotlin
+            // represents as a two-Char surrogate pair -- one code point, but not one Char. Those
+            // few entries cannot be represented in the current Char-keyed model and are dropped
+            // rather than crashing the whole pack load over eight fold entries out of ~100.
+            singleCharFolds = dto.singleCharFolds.entries
+                .filter { (k, v) -> k.length == 1 && v.length == 1 }
+                .associate { (k, v) -> k.single() to v.single() },
             sequenceFolds = dto.sequenceFolds,
             shortLabelDistance = dto.distance.shortLabelDistance,
             longLabelDistance = dto.distance.longLabelDistance,

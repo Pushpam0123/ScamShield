@@ -118,6 +118,26 @@ class RulePackJsonParserTest {
         assertThat(RulePackJsonParser.parseMeta(json).version).isEqualTo("v1")
     }
 
+    @Test
+    fun `a fold key outside the Basic Multilingual Plane is dropped, not a crash`() {
+        // U+1D5EE MATHEMATICAL SANS-SERIF BOLD SMALL A -- one Unicode code point (so Python's
+        // `len()` in build_rulepack.py's schema validator accepts it as "one character"), but
+        // a UTF-16 surrogate *pair* in Kotlin, so `String.single()` on the raw key throws. This
+        // is a real entry in the shipped rulepack/src/typosquat.json; a fixed-length fixture
+        // string reproduces the exact failure this parser must survive.
+        val supplementaryPlaneA = "𝗮" // "𝗮"
+        val json = """
+            {"schema_version":1,
+             "single_char_folds":{"а":"a","$supplementaryPlaneA":"a"},
+             "sequence_folds":{},
+             "distance":{"short_label_max_length":6,"short_label_distance":1,"long_label_distance":2},
+             "suspicious_tlds":["xyz"]}
+        """.trimIndent()
+        val (table, _) = RulePackJsonParser.parseTyposquat(json)
+        assertThat(table.singleCharFolds).containsEntry('а', 'a')
+        assertThat(table.singleCharFolds).hasSize(1) // the supplementary-plane entry was dropped, not crashed on
+    }
+
     @Test(expected = RulePackValidationException::class)
     fun `a schema_version mismatch throws rather than silently proceeding`() {
         RulePackJsonParser.parseBanks("""{"schema_version":2,"brands":[]}""")
