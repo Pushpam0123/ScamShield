@@ -69,12 +69,21 @@ class UrlAnalyzer(
         }
 
         val registrable = url.registrableDomain ?: return emptyList()
-        val label = registrable.substringBefore('.')
+        // design.md section 3.3 requires the homograph and confusable-fold checks to "operate
+        // on the ORIGINAL host string" -- but `registrable` has already been through
+        // PublicSuffixListParser's IDN.toASCII (needed for eTLD+1 matching against ASCII PSL
+        // rules), which punycode-encodes any Cyrillic/Greek/Armenian codepoints away into an
+        // opaque "xn--" label. Run the typosquat/homograph/fold checks against the original-
+        // script reconstruction instead, or a real Unicode homograph domain can never trigger
+        // either check no matter what it contains -- see originalScriptRegistrable's own doc
+        // comment for why reconstructing it from `url.host` is safe.
+        val originalRegistrable = originalScriptRegistrable(registrable, url.host)
+        val label = originalRegistrable.substringBefore('.')
         val evidence = mutableListOf<Evidence>()
 
         val directHit = typosquatDetector.detect(label, knownDomains)
         if (directHit != null) {
-            evidence += typosquatEvidence(registrable, directHit, span)
+            evidence += typosquatEvidence(originalRegistrable, directHit, span)
         }
 
         if (HomographDetector.hasMixedScript(label)) {
@@ -98,10 +107,10 @@ class UrlAnalyzer(
                 val exactFoldMatch = knownDomains.firstOrNull { (_, domain) -> domain.substringBefore('.') == folded }
                 if (exactFoldMatch != null) {
                     val (brand, domain) = exactFoldMatch
-                    evidence += typosquatEvidence(registrable, TyposquatHit(brand, folded, domain), span)
+                    evidence += typosquatEvidence(originalRegistrable, TyposquatHit(brand, folded, domain), span)
                 } else {
                     typosquatDetector.detect(folded, knownDomains)?.let { foldedHit ->
-                        evidence += typosquatEvidence(registrable, foldedHit, span)
+                        evidence += typosquatEvidence(originalRegistrable, foldedHit, span)
                     }
                 }
             }
@@ -182,6 +191,20 @@ class UrlAnalyzer(
     private fun isShortener(registrable: String): Boolean {
         if (registrable in shortenerBrandOperated) return false // brand's own shortener: never a warning
         return registrable in shorteners
+    }
+
+    /**
+     * Reconstructs the registrable domain in its original script from [host] (the as-written
+     * form `ExtractedUrl.host` preserves) rather than [asciiRegistrable] (the IDN-encoded form
+     * `PublicSuffixListParser` returns). IDN-encodes each label independently and never changes
+     * label count or order, so the original-script registrable domain is exactly [host]'s
+     * trailing N labels, where N is [asciiRegistrable]'s own label count -- correct regardless
+     * of how many subdomain labels precede the registrable part. A no-op for an
+     * already-ASCII host, since encoding ASCII through IDN.toASCII changes nothing.
+     */
+    private fun originalScriptRegistrable(asciiRegistrable: String, host: String): String {
+        val labelCount = asciiRegistrable.count { it == '.' } + 1
+        return host.split('.').takeLast(labelCount).joinToString(".")
     }
 
     /** Duplicated (not shared) from `:core:analysis`'s PSL parser -- see DECISIONS.md. */

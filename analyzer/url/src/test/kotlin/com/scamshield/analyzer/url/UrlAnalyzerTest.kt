@@ -101,6 +101,42 @@ class UrlAnalyzerTest {
     }
 
     @Test
+    fun `homograph is still detected when registrableDomain is already IDN-encoded, as the real PSL parser produces`() = runTest {
+        // The real UrlExtractor + PublicSuffixListParser pipeline (:core:analysis) runs
+        // IDN.toASCII while computing eTLD+1, so ExtractedUrl.registrableDomain is punycode
+        // ("xn--sbi-6cd.com" for "sаbi.com"), never the raw Unicode UrlAnalyzer would need to
+        // see the mixed script directly. The fixture above hand-sets registrableDomain to the
+        // raw Unicode string, which is exactly what let the integration bug this test locks in
+        // slip past every existing test: host and registrableDomain must differ here the same
+        // way they really do, or this test would pass even if UrlAnalyzer read the wrong field.
+        val homographHost = "s${'а'}bi.com"
+        val idnEncodedRegistrable = "xn--sbi-6cd.com"
+        val signal = analyzer().analyze(
+            message(listOf(url(raw = homographHost, host = homographHost, registrableDomain = idnEncodedRegistrable))),
+        ) as Signal.Scored
+        assertThat(signal.evidence.map { it.type }).contains(EvidenceType.HOMOGRAPH_CHARACTERS)
+    }
+
+    @Test
+    fun `confusable fold still works when registrableDomain is already IDN-encoded`() = runTest {
+        // Same real-pipeline mismatch as above, for the fold-based re-check: folding
+        // "xn--b-cvbe.com" (no Cyrillic left to fold) would find nothing, so this must operate
+        // on the original-script reconstruction, not the IDN-encoded registrableDomain.
+        val testConfusables = confusables.copy(singleCharFolds = confusables.singleCharFolds + ('ѕ' to 's'))
+        val host = "${'ѕ'}b${'ı'}.com" // Cyrillic dze + dotless-i, folds to "sbi"
+        val idnEncodedRegistrable = "xn--b-fka42v.com" // IDN.toASCII("ѕbı.com") -- verified independently
+        val signal = UrlAnalyzer(
+            confusables = testConfusables,
+            banks = listOf(sbi),
+            shorteners = emptySet(),
+            shortenerBrandOperated = emptyMap(),
+            suspiciousTlds = emptySet(),
+            reputationIndex = FakeReputationIndex(),
+        ).analyze(message(listOf(url(raw = host, host = host, registrableDomain = idnEncodedRegistrable)))) as Signal.Scored
+        assertThat(signal.evidence.map { it.type }).contains(EvidenceType.TYPOSQUAT_OF_KNOWN_BRAND)
+    }
+
+    @Test
     fun `punycode host is not itself flagged as homograph but is available for other checks`() {
         val u = url(raw = "xn--sb-xkc.com", host = "xn--sb-xkc.com", registrableDomain = "xn--sb-xkc.com", isPunycode = true)
         assertThat(u.isPunycode).isTrue()
