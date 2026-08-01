@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
 }
@@ -146,6 +147,8 @@ dependencies {
     testImplementation(libs.mockk)
     testImplementation(libs.robolectric)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Phase 1 fixture corpus (design.md section 12): decodes app/src/test/resources/fixtures/verdicts.json.
+    testImplementation(libs.kotlinx.serialization.json)
     testImplementation(libs.turbine)
 
     androidTestImplementation(libs.androidx.test.junit)

@@ -1,0 +1,207 @@
+{
+  "_comment": "design.md section 12's fixture corpus: (message, senderHint, expectedVerdict, expectedEvidenceTypes), run against the real Phase 1 pipeline (MessageNormalizer + the three rule analyzers + FusionPolicy) with the classifier permanently absent, exactly as :app ships it. Loaded and asserted by VerdictFixtureTest.kt. expectedEvidenceTypes is a subset check (evidence the fixture must contain, not an exhaustive list); expectedAbsentEvidenceTypes is the inverse, for exemption cases.",
+  "_comment_verdicts": "Many wording-only fixtures below (no URL/sender trigger) expect SAFE even though the message is obviously scam-flavored to a human. This is verified, correct Phase 1 behavior, not an undertuned test: the pattern analyzer's own fusion weight is only 0.08 (design.md section 7 step 2), capped at 0.5 internally, so even a maximally-matched pattern-only message renormalizes (classifier absent) to about 0.09 -- deep in the SAFE band (< 0.35). Only the URL and sender analyzers (weights 0.25 / 0.12, and the only two allowed to set forceVerdict) can move a Phase 1 verdict out of SAFE. This is the direct, intended consequence of design.md's own words: 'rules alone must not produce a confident SCAM on wording evidence' -- it is simply a stronger floor than 'not SCAM' alone. Fixing this requires the classifier (Phase 4), not a rule change.",
+
+  "categoryExamples": [
+    { "id": "category_kyc_phishing", "category": "KYC_PHISHING",
+      "text": "Dear customer, your SBI KYC has expired. Update immediately at http://sbi-kyc-verify.xyz or your account will be suspended.",
+      "senderHint": null, "expectedVerdict": "SCAM", "expectedEvidenceTypes": ["TYPOSQUAT_OF_KNOWN_BRAND"] },
+
+    { "id": "category_fake_job", "category": "FAKE_JOB",
+      "text": "Work from home job opportunity! Earn Rs.5000 daily, no experience required. Pay a registration fee of Rs.500 to start.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["UNREALISTIC_REWARD", "ADVANCE_FEE_REQUEST"] },
+
+    { "id": "category_lottery_prize", "category": "LOTTERY_PRIZE",
+      "text": "Congratulations you have won Rs.25,00,000 in the lucky draw! To claim your prize money, pay a processing fee of Rs.2000.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["UNREALISTIC_REWARD"] },
+
+    { "id": "category_digital_arrest", "category": "DIGITAL_ARREST",
+      "text": "This is CBI. An arrest warrant has been issued against you. Stay on this video call or face immediate legal action.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["THREAT_OF_LOSS"] },
+
+    { "id": "category_courier_customs", "category": "COURIER_CUSTOMS",
+      "text": "Your Amazon parcel is held at customs due to incomplete address. Pay a clearance fee at http://amazon-clearance.xyz to release your shipment.",
+      "senderHint": null, "expectedVerdict": "SCAM", "expectedEvidenceTypes": ["TYPOSQUAT_OF_KNOWN_BRAND"] },
+
+    { "id": "category_loan_app", "category": "LOAN_APP",
+      "text": "Instant loan approved! No documents required. Get a pre-approved loan of Rs.50000 within minutes. Download our app now.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["UNREALISTIC_REWARD"] },
+
+    { "id": "category_upi_collect", "category": "UPI_COLLECT",
+      "text": "Paytm: Approve the UPI request to receive your cashback of Rs.500 at http://paytm-cashback.xyz",
+      "senderHint": null, "expectedVerdict": "SCAM", "expectedEvidenceTypes": ["TYPOSQUAT_OF_KNOWN_BRAND", "UPI_COLLECT_FRAMING"] },
+
+    { "id": "category_investment_trading", "category": "INVESTMENT_TRADING",
+      "text": "Invest with us today. Double your money in just 30 days, guaranteed profit with zero risk. Limited slots available.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["UNREALISTIC_REWARD"] },
+
+    { "id": "category_tech_support", "category": "TECH_SUPPORT",
+      "text": "Your computer has been hacked. Call this toll-free number immediately and install AnyDesk so our technician can fix it remotely.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["OTP_SOLICITATION"] },
+
+    { "id": "category_sextortion", "category": "SEXTORTION",
+      "text": "I have access to your webcam. Your private video has been recorded. I will send the video to your contacts unless you pay immediately in Bitcoin to 1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["THREAT_OF_LOSS", "CRYPTO_WALLET_ADDRESS"] },
+
+    { "id": "category_electricity_disconnection", "category": "ELECTRICITY_DISCONNECTION",
+      "text": "Your electricity connection will be disconnected tonight due to unpaid bill. Contact our department immediately to avoid disconnection.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["THREAT_OF_LOSS"] },
+
+    { "id": "category_other_scam", "category": "OTHER_SCAM",
+      "text": "This is your final notice. Respond immediately or face serious consequences. Call 1900-555-0123 now.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": [] }
+  ],
+
+  "genuineBankSms": [
+    { "id": "genuine_sbi_debit_alert",
+      "text": "Dear Customer, Rs.2,500.00 debited from A/c XX1234 on 01-Aug-26. Avl Bal Rs.15,320.00. Not you? Report immediately. -SBI",
+      "senderHint": "VM-SBIINB", "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_hdfc_otp_with_do_not_share",
+      "text": "Your HDFC Bank OTP for txn of Rs.1500 is 482913. Valid 10 min. Do not share this OTP with anyone. -HDFC Bank",
+      "senderHint": "AD-HDFCBK", "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_icici_credit_alert",
+      "text": "Your ICICI Bank A/c XX5678 is credited with Rs.45,000.00 on 01-08-2026. Info: SALARY. Avl bal: Rs.67,230.00",
+      "senderHint": "AD-ICICIB", "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_axis_card_statement",
+      "text": "Dear Customer, your Axis Bank Credit Card statement for Aug 2026 is generated. Total due: Rs.12,450. Due date: 20-Aug-2026. -Axis Bank",
+      "senderHint": "VM-AXISBK", "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_kotak_debit_card_txn",
+      "text": "Kotak Bank: Rs.3,200 spent on your Debit Card XX9012 at a nearby merchant on 01-Aug-26 14:32. Not you? Call us. -Kotak",
+      "senderHint": "VM-KOTAKB", "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_pnb_balance_enquiry",
+      "text": "PNB: Your available balance in A/c XX3344 as on 01-Aug-26 is Rs.28,910.50. -Punjab National Bank",
+      "senderHint": "VM-PNBSMS", "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_bob_fd_maturity",
+      "text": "Bank of Baroda: Your Fixed Deposit A/c XX7788 matures on 15-Aug-2026. Maturity amount: Rs.1,05,400. Visit branch for renewal options.",
+      "senderHint": "VM-BOBSMS", "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_paytm_wallet_load",
+      "text": "Paytm: Rs.1,000 added to your wallet successfully via UPI. Wallet balance: Rs.1,450. Thank you for using Paytm.",
+      "senderHint": "VM-PAYTMB", "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_amazon_order_delivered",
+      "text": "Amazon: Your order #402-1174521 has been delivered. Track or return at https://amazon.in/orders",
+      "senderHint": "VM-AMAZON", "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_irctc_pnr_confirmation",
+      "text": "IRCTC: Your PNR 8827461950 is confirmed. Train 12951, Coach B4, Seat 23. Have a safe journey.",
+      "senderHint": "VM-IRCTCI", "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_uidai_aadhaar_update",
+      "text": "UIDAI: Your Aadhaar update request has been successfully processed. Your updated e-Aadhaar is available for download.",
+      "senderHint": "VM-UIDAI", "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_courier_delivery_notification",
+      "text": "Your order #4471 has been shipped and will be delivered by tomorrow. Track your package at https://bluedart.com/track/4471",
+      "senderHint": null, "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_promotional_offer",
+      "text": "Flat 40% off on your next order! Use code SAVE40 at checkout. Valid till 5th August. Order now at swiggy.com",
+      "senderHint": null, "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_personal_message",
+      "text": "Hey, are we still meeting for lunch tomorrow at 1pm? Let me know if that still works for you!",
+      "senderHint": null, "expectedVerdict": "SAFE" },
+
+    { "id": "genuine_hdfc_loan_emi_reminder",
+      "text": "Dear Customer, your HDFC Bank Personal Loan EMI of Rs.8,500 is due on 05-Aug-2026. Please ensure sufficient balance. -HDFC Bank",
+      "senderHint": "AD-HDFCBK", "expectedVerdict": "SAFE" }
+  ],
+
+  "urlCases": [
+    { "id": "url_homograph_with_brand_claim",
+      "text": "Verify your SBI account now at http://sаbi.com/verify",
+      "senderHint": null, "expectedVerdict": "SCAM", "expectedEvidenceTypes": ["HOMOGRAPH_CHARACTERS"] },
+
+    { "id": "url_punycode_alone_no_brand",
+      "text": "Please visit http://xn--sb-xkc.com for details.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": [] },
+
+    { "id": "url_substring_typosquat_with_brand",
+      "text": "Your SBI KYC has expired, update at http://sbi-kyc-verify.xyz immediately.",
+      "senderHint": null, "expectedVerdict": "SCAM", "expectedEvidenceTypes": ["TYPOSQUAT_OF_KNOWN_BRAND"] },
+
+    { "id": "url_confusable_fold_typosquat_with_brand",
+      "text": "SBI alert: confirm your details at http://ѕbі.com now.",
+      "senderHint": null, "expectedVerdict": "SCAM", "expectedEvidenceTypes": ["TYPOSQUAT_OF_KNOWN_BRAND"] },
+
+    { "id": "url_ip_host_no_brand",
+      "text": "Click here to verify: http://192.168.1.1/login",
+      "senderHint": null, "expectedVerdict": "SUSPICIOUS", "expectedEvidenceTypes": ["IP_ADDRESS_HOST"] },
+
+    { "id": "url_ip_host_with_brand",
+      "text": "HDFC security alert: verify your account at http://192.168.1.1/login",
+      "senderHint": null, "expectedVerdict": "SCAM", "expectedEvidenceTypes": ["IP_ADDRESS_HOST"] },
+
+    { "id": "url_bare_shortener_alone",
+      "text": "Check this out bit.ly/xyz123",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["URL_SHORTENER"] },
+
+    { "id": "url_brand_operated_shortener_exempted",
+      "text": "Your Amazon order update: amzn.to/track123",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": [], "expectedAbsentEvidenceTypes": ["URL_SHORTENER"] },
+
+    { "id": "url_suspicious_tld_alone",
+      "text": "Great deals at http://mybusiness.xyz this week.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["SUSPICIOUS_TLD"] },
+
+    { "id": "url_non_https_credential_page_alone",
+      "text": "Login required at http://cheapdeals.top/login to continue.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["NON_HTTPS_CREDENTIAL_PAGE"] }
+  ],
+
+  "languageCoverage": [
+    { "id": "lang_en", "language": "EN",
+      "text": "Please share your OTP to verify your account.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["OTP_SOLICITATION"] },
+
+    { "id": "lang_hi", "language": "HI",
+      "text": "कृपया अपना ओटीपी हमें शेयर करें।",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["OTP_SOLICITATION"] },
+
+    { "id": "lang_hi_latn", "language": "HI_LATN",
+      "text": "apna otp turant share karo",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["OTP_SOLICITATION"] },
+
+    { "id": "lang_bn", "language": "BN",
+      "text": "আপনার ওটিপি আমাদের সাথে শেয়ার করুন।",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["OTP_SOLICITATION"] },
+
+    { "id": "lang_ta", "language": "TA",
+      "text": "தயவுசெய்து ஓடிபி எங்களிடம் பகிர வேண்டும்.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["OTP_SOLICITATION"] },
+
+    { "id": "lang_te", "language": "TE",
+      "text": "దయచేసి మీ ఓటీపీ మాకు షేర్ చేయండి.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["OTP_SOLICITATION"] },
+
+    { "id": "lang_mr", "language": "MR",
+      "text": "कृपया तुमचा ओटीपी आम्हाला शेयर करा.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["OTP_SOLICITATION"] }
+  ],
+
+  "degenerate": [
+    { "id": "degenerate_empty",
+      "text": "", "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": [] },
+
+    { "id": "degenerate_whitespace_only",
+      "text": "   \n\t  ", "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": [] },
+
+    { "id": "degenerate_emoji_only",
+      "text": "😀🎉🔥💯👍", "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": [] },
+
+    { "id": "degenerate_no_url_scam_wording",
+      "text": "URGENT: your account will be blocked today, share your OTP immediately to keep it active.",
+      "senderHint": null, "expectedVerdict": "SAFE", "expectedEvidenceTypes": ["OTP_SOLICITATION", "THREAT_OF_LOSS"] },
+
+    { "id": "degenerate_url_only",
+      "text": "http://sbi-kyc-verify.xyz",
+      "senderHint": null, "expectedVerdict": "SCAM", "expectedEvidenceTypes": ["TYPOSQUAT_OF_KNOWN_BRAND"] }
+  ]
+}
