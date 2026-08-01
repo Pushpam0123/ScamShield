@@ -121,6 +121,21 @@ def _project_module_from(student_module: nn.Module, teacher_module: nn.Module) -
     student_module.load_state_dict(projected, strict=False)
 
 
+def _transformer_layers(encoder: nn.Module) -> nn.ModuleList:
+    """The student is always our own `AutoModel.from_config(BertConfig(...))`, always
+    `.encoder.layer` (standard BERT module naming). The teacher can be any HF encoder design.md
+    or a session's own substitution picks -- `google/muril-base-cased` is BERT-family
+    (`.encoder.layer`), but e.g. DistilBERT (no separate encoder wrapper, no token-type
+    embeddings) names the same thing `.transformer.layer`. Both are tried rather than assuming
+    one, since `model.py`'s `from_pretrained` accepts any encoder `AutoModel` resolves.
+    """
+    if hasattr(encoder, "encoder") and hasattr(encoder.encoder, "layer"):
+        return encoder.encoder.layer
+    if hasattr(encoder, "transformer") and hasattr(encoder.transformer, "layer"):
+        return encoder.transformer.layer
+    raise AttributeError(f"don't know how to find transformer layers on {type(encoder).__name__}")
+
+
 def init_student_from_teacher(
     student: ScamShieldClassifier,
     teacher: ScamShieldClassifier,
@@ -133,8 +148,8 @@ def init_student_from_teacher(
     """
     with torch.no_grad():
         _project_module_from(student.encoder.embeddings, teacher.encoder.embeddings)
-        student_layers = student.encoder.encoder.layer
-        teacher_layers = teacher.encoder.encoder.layer
+        student_layers = _transformer_layers(student.encoder)
+        teacher_layers = _transformer_layers(teacher.encoder)
         if len(student_layers) != len(teacher_layer_indices):
             raise ValueError(
                 f"student has {len(student_layers)} layers but {len(teacher_layer_indices)} "
@@ -267,20 +282,35 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--dataset", required=True, type=Path)
     parser.add_argument("--teacher-dir", required=True, type=Path, help="Output dir from train_teacher.py")
+    parser.add_argument(
+        "--model-name",
+        default=None,
+        help="The teacher's base model name, as passed to train_teacher.py's --model-name. "
+        "Defaults to train_teacher.TEACHER_MODEL_NAME (google/muril-base-cased) if not given.",
+    )
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--lr", type=float, default=DEFAULT_LR)
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument("--epochs", type=int, default=DEFAULT_EPOCHS)
     parser.add_argument("--max-seq-len", type=int, default=128)
+    parser.add_argument(
+        "--teacher-layer-indices",
+        default=",".join(str(i) for i in TEACHER_LAYER_INDICES),
+        help="Comma-separated 1-indexed teacher hidden-state layers to seed the 4 student layers "
+        "from -- design.md's own [3,6,9,12] assumes a 12-layer teacher (muril-base-cased). A "
+        "different teacher (e.g. DistilBERT's 6 layers) needs its own indices here.",
+    )
     parser.add_argument("--experiments-log", type=Path, default=Path(__file__).resolve().parents[2] / "EXPERIMENTS.md")
     args = parser.parse_args(argv)
+    teacher_layer_indices = tuple(int(i) for i in args.teacher_layer_indices.split(","))
 
     from transformers import AutoTokenizer
 
     from .train_teacher import TEACHER_MODEL_NAME
 
+    model_name = args.model_name or TEACHER_MODEL_NAME
     tokenizer = AutoTokenizer.from_pretrained(args.teacher_dir)
-    teacher = ScamShieldClassifier.from_pretrained(TEACHER_MODEL_NAME)
+    teacher = ScamShieldClassifier.from_pretrained(model_name)
     teacher.load_state_dict(torch.load(args.teacher_dir / "teacher.pt", map_location="cpu"))
 
     student = ScamShieldClassifier.from_config(student_config(tokenizer.vocab_size))
@@ -290,6 +320,8 @@ def main(argv: list[str] | None = None) -> int:
 
     config = {
         "stage": "distill",
+        "teacher_model_name": model_name,
+        "teacher_layer_indices": list(teacher_layer_indices),
         "lr": args.lr,
         "batch_size": args.batch_size,
         "epochs": args.epochs,
@@ -308,6 +340,7 @@ def main(argv: list[str] | None = None) -> int:
         batch_size=args.batch_size,
         epochs=args.epochs,
         max_seq_len=args.max_seq_len,
+        teacher_layer_indices=teacher_layer_indices,
     )
     wall_clock = time.monotonic() - start
 
