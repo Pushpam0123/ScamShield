@@ -37,7 +37,13 @@ def fit_temperature(logits: torch.Tensor, labels: torch.Tensor, max_iter: int = 
     logits = logits.detach()
     labels = labels.detach()
     log_temperature = torch.zeros(1, requires_grad=True)
-    optimizer = torch.optim.LBFGS([log_temperature], lr=0.05, max_iter=max_iter)
+    # `line_search_fn="strong_wolfe"` is not optional here -- without it, LBFGS's default line
+    # search has no step-size safeguard and can take one catastrophic jump (observed: T~0.89 ->
+    # T~3e-8 in a single step on a real small validation set), overflowing the loss and getting
+    # permanently stuck driving T toward 0 afterward. Wolfe conditions bound the step so this
+    # can't happen; this is also what the original temperature-scaling reference implementation
+    # (Guo et al. 2017) uses.
+    optimizer = torch.optim.LBFGS([log_temperature], lr=0.05, max_iter=max_iter, line_search_fn="strong_wolfe")
 
     def closure() -> torch.Tensor:
         optimizer.zero_grad()
