@@ -17,7 +17,7 @@ ml/EXPERIMENTS.md and HANDOFF.md for the full account):
   an ordinary personal message, not a real transactional bank alert.
 - Scam categories (KYC_PHISHING, LOTTERY_PRIZE, etc.) were assigned by a keyword heuristic
   against the dataset's own ground-truth spam/ham labels, not by a human labeler -- see each
-  row's `labeled_by` field and ml/src/scamshield_ml/categorize_uci.py's own docstring.
+  row's `labeled_by` field and ml/scripts/label_uci_sample.py's own docstring.
 - 180 rows total, far short of design.md's >=12,000-row target.
 
 This is an intentionally small, honestly-scoped starting corpus for exercising the pipeline
