@@ -758,7 +758,7 @@
 
     { "id": "indeed", "display_name": "Indeed",
       "aliases": ["indeed jobs"],
-      "domains": ["indeed.com", "in.indeed.com"],
+      "domains": ["indeed.com"],
       "dlt_headers": ["INDEED"] },
 
     { "id": "binance", "display_name": "Binance",
