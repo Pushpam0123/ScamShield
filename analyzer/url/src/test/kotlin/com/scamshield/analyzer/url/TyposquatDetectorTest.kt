@@ -85,4 +85,36 @@ class TyposquatDetectorTest {
     fun `squash strips hyphens dots underscores and digits`() {
         assertThat(TyposquatDetector.squash("s-b.i_2")).isEqualTo("sbi")
     }
+
+    // --- a candidate that is itself a real brand's own domain must never be flagged against a
+    // *different* brand, regardless of iteration order (the real bug: paytm.com flagged as
+    // impersonating Google Pay's "pay.google.com", because a per-pair "D == B" skip only
+    // protects a candidate from the one brand it happens to equal). ---
+
+    @Test
+    fun `a brand's own domain is not flagged against an unrelated brand with a short substring label`() {
+        val gpay = BankEntry("gpay", "Google Pay", listOf("google pay", "gpay"), listOf("pay.google.com"), listOf("GOOGLE"))
+        val paytm = BankEntry("paytm", "Paytm", listOf("paytm"), listOf("paytm.com"), listOf("PAYTM"))
+        // paytm listed before gpay: paytm's own exact-match entry is seen first and only
+        // `continue`s past itself under the old per-pair check -- this ordering is what let
+        // the bug slip through, so keep it exactly this way rather than the reverse.
+        val domains = listOf(paytm to "paytm.com", gpay to "pay.google.com")
+
+        assertThat(detector.detect("paytm", domains)).isNull()
+    }
+
+    @Test
+    fun `a short known label does not substring-match an unrelated real word`() {
+        val whatsapp = BankEntry("whatsapp", "WhatsApp", listOf("whatsapp"), listOf("wa.me"), listOf("WHATSAP"))
+        // "wa" (2 chars) is a substring of "malware" with no impersonation implied at all.
+        assertThat(detector.detect("malware", listOf(whatsapp to "wa.me"))).isNull()
+    }
+
+    @Test
+    fun `a short known label still hits via the distance rule when actually close`() {
+        val whatsapp = BankEntry("whatsapp", "WhatsApp", listOf("whatsapp"), listOf("wa.me"), listOf("WHATSAP"))
+        // "wa" is short-label (distance threshold 1); "waa" is one insertion away.
+        val hit = detector.detect("waa", listOf(whatsapp to "wa.me"))
+        assertThat(hit?.brand?.id).isEqualTo("whatsapp")
+    }
 }
