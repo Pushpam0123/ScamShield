@@ -81,7 +81,7 @@ def load_split(dataset_path: Path, split_name: str) -> list[Row]:
     return [r for r in rows if r.is_labeled and r.split == split_name]
 
 
-def _make_loader(
+def make_loader(
     rows: list[Row], tokenizer: PreTrainedTokenizerBase, max_seq_len: int, batch_size: int, shuffle: bool
 ) -> DataLoader:
     return DataLoader(
@@ -153,8 +153,8 @@ def train(
     early, and keeping every epoch's val score is what makes `history` in the returned dict
     actually useful for `EXPERIMENTS.md`).
     """
-    train_loader = _make_loader(train_rows, tokenizer, max_seq_len, batch_size, shuffle=True)
-    val_loader = _make_loader(val_rows, tokenizer, max_seq_len, batch_size, shuffle=False)
+    train_loader = make_loader(train_rows, tokenizer, max_seq_len, batch_size, shuffle=True)
+    val_loader = make_loader(val_rows, tokenizer, max_seq_len, batch_size, shuffle=False)
 
     binary_weight = torch.tensor([1.0, scam_class_weight])
     binary_criterion = torch.nn.CrossEntropyLoss(weight=binary_weight)
