@@ -151,6 +151,19 @@ class VerdictFixtureTest {
     }
 
     @Test
+    fun `p95 end-to-end latency across the fixture corpus is under the 50ms rules-only budget`() = runTest {
+        // implementation.md Phase 1 acceptance: "End-to-end analysis p95 less than 50 ms (rules
+        // only)." Not a formal Macrobenchmark (that is :benchmark, introduced in Phase 4 per
+        // DECISIONS.md D-007) -- a real measurement off the same fixture corpus every other
+        // test here already runs, on whatever hardware CI happens to run on, which is what
+        // "spot-check the real number, do not fabricate one" actually looks like pre-Phase-4.
+        val fixtures = loadFixtures()
+        val latencies = fixtures.all().map { analyze(it).latencyMs }.sorted()
+        val p95Index = (latencies.size * 0.95).toInt().coerceAtMost(latencies.size - 1)
+        assertThat(latencies[p95Index]).isLessThan(50L)
+    }
+
+    @Test
     fun `fixture corpus covers all 12 scam categories, 10 url cases, 7 languages, and 6 degenerate cases`() {
         val fixtures = loadFixtures()
         assertThat(fixtures.categoryExamples).hasSize(12)
