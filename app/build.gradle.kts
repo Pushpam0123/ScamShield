@@ -112,6 +112,31 @@ tasks.named("preBuild") {
     dependsOn(rootProject.tasks.named("buildRulepack"))
 }
 
+// The ML model assets (Phase 4) are gitignored generated output too — but unlike the rule pack,
+// they are NOT regenerable from the ordinary build: producing them needs the Python `ml/`
+// pipeline, torch, and a dataset (`cd ml && make teacher distill prune export calibrate`). So
+// this is a standalone copy task, deliberately NOT wired into `preBuild`: a fresh checkout that
+// hasn't trained a model simply has no `assets/model/`, and `ClassifierAnalyzer` degrades to
+// `Signal.Unavailable` exactly as architecture.md C6 requires (the app stays fully functional on
+// rules alone). Run `./gradlew :app:copyModelAssets` after training to bundle a model.
+val mlArtifactsDir = rootProject.layout.projectDirectory.dir("ml/artifacts").asFile
+val quantizedModelFile = mlArtifactsDir.resolve("model.int8.onnx")
+tasks.register<Copy>("copyModelAssets") {
+    group = "build setup"
+    description = "Copies the trained ONNX model, tokenizer, and calibration meta into app assets (Phase 4)"
+    // A dev-only, run-on-demand copy that isn't part of the cached build graph (it's never a
+    // dependency of assemble/test). Marking it exempt is cleaner than contorting a Copy spec to
+    // satisfy the configuration cache for a task that gains nothing from being cached.
+    notCompatibleWithConfigurationCache("Standalone on-demand asset copy, not part of the build graph")
+    into(layout.projectDirectory.dir("src/main/assets/model"))
+    // String regex form of rename (not a closure) keeps this task configuration-cache-safe.
+    from(quantizedModelFile) { rename("model\\.int8\\.onnx", "model.onnx") }
+    from(mlArtifactsDir.resolve("tokenizer.json"))
+    from(mlArtifactsDir.resolve("meta.json"))
+    // Don't fail the whole build when a model hasn't been trained yet — just copy nothing.
+    onlyIf { quantizedModelFile.exists() }
+}
+
 dependencies {
     // architecture.md §5 — :app is the only module that may see analyzer *implementations*.
     // It binds them to interfaces via Hilt so that :core:analysis stays implementation-blind.
@@ -122,6 +147,9 @@ dependencies {
     implementation(projects.analyzer.url)
     implementation(projects.analyzer.sender)
     implementation(projects.analyzer.pattern)
+    // Phase 4: the classifier analyzer. Bundled here so Hilt (AnalysisModule) can bind it; the
+    // module degrades to Signal.Unavailable when no model asset is present (architecture.md C6).
+    implementation(projects.analyzer.classifier)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
