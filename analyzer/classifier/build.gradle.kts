@@ -16,6 +16,14 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
+
+    // The C6 degrade path logs via android.util.Log; let JVM unit tests see stubbed defaults
+    // rather than the "not mocked" RuntimeException. The real inference path is instrumented.
+    testOptions {
+        unitTests {
+            isReturnDefaultValues = true
+        }
+    }
 }
 
 // The one analyzer that must be an Android library: ONNX Runtime Mobile ships native
