@@ -1,6 +1,7 @@
 package com.scamshield.analyzer.classifier
 
 import ai.djl.huggingface.tokenizers.HuggingFaceTokenizer
+import ai.onnxruntime.OnnxTensor
 import ai.onnxruntime.OrtEnvironment
 import ai.onnxruntime.OrtSession
 import android.util.Log
@@ -28,10 +29,9 @@ import java.io.Closeable
  * thread (design.md §6 / implementation.md Phase 4) — this runs alongside three other analyzers
  * and a UI, and a phone's few big cores are better left for them than saturated by one matmul.
  *
- * Scope note: this file lands the *loading* half of Phase 4 (day 1 of §12's plan). Tokenization,
- * the calibrated `p_scam` mapping, evidence, and category selection (design.md §6.1/§6.2) are the
- * next step and are why [analyze] still returns [Signal.Unavailable] even once the model loads;
- * the loaded [LoadedModel] holds everything that step needs.
+ * Inference itself is the [ClassifierScoring] object's problem, kept pure so it unit-tests on the
+ * JVM; this class owns only the native edges — the DJL tokenizer encode and the ONNX Runtime run —
+ * which is why they, and only they, are wrapped in the degrade-to-[Signal.Unavailable] catch.
  */
 class ClassifierAnalyzer(
     private val assets: ClassifierAssets,
@@ -90,10 +90,41 @@ class ClassifierAnalyzer(
 
     override suspend fun analyze(message: NormalizedMessage): Signal {
         val model = ensureLoaded() ?: return Signal.Unavailable(id, "classifier model unavailable")
-        // Loading works; tokenization + calibrated scoring + evidence come next (§12 day 2).
-        @Suppress("UNUSED_VARIABLE")
-        val ready = model
-        return Signal.Unavailable(id, "classifier inference not yet implemented")
+        return try {
+            withContext(ioDispatcher) { infer(model, message.normalized) }
+        } catch (t: Throwable) {
+            // design.md §6.3 / architecture.md C6: a bad encode or a failed run degrades this one
+            // message to Unavailable; the loaded session stays up for the next call.
+            Log.w(TAG, "classifier inference failed; degrading to unavailable", t)
+            Signal.Unavailable(id, "classifier inference failed")
+        }
+    }
+
+    private fun infer(model: LoadedModel, text: String): Signal {
+        val encoded = ClassifierScoring.pack(model.tokenizer.encode(text).ids)
+        if (encoded.truncated) Log.d(TAG, "message exceeded ${ClassifierScoring.SEQ_LEN} tokens; tail truncated")
+
+        // `arrayOf(row)` is a `long[1][SEQ_LEN]` — the batch-of-one shape the graph expects.
+        val inputIds = OnnxTensor.createTensor(model.environment, arrayOf(encoded.inputIds))
+        val attentionMask = OnnxTensor.createTensor(model.environment, arrayOf(encoded.attentionMask))
+        val binary: FloatArray
+        val category: FloatArray
+        inputIds.use { ids ->
+            attentionMask.use { mask ->
+                model.session.run(mapOf("input_ids" to ids, "attention_mask" to mask)).use { result ->
+                    binary = floatRow(result, "binary_logits")
+                    category = floatRow(result, "category_logits")
+                }
+            }
+        }
+        return ClassifierScoring.buildSignal(binary, category, model.temperature)
+    }
+
+    /** Pull the first (batch-of-one) row out of a `[1, N]` float output tensor by name. */
+    private fun floatRow(result: OrtSession.Result, name: String): FloatArray {
+        val tensor = result.get(name).orElseThrow { IllegalStateException("model output '$name' missing") }
+        @Suppress("UNCHECKED_CAST")
+        return (tensor.value as Array<FloatArray>)[0]
     }
 
     private companion object {
