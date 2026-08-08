@@ -41,8 +41,15 @@ ml/artifacts/
 app/src/main/assets/rulepack/
 rulepack/.cache/
 
+# Vendored C++ STL for DJL's native tokenizer, copied out of the NDK by
+# :analyzer:classifier:vendorNativeStl. Prebuilt binary, not source; regenerable.
+analyzer/classifier/src/main/jniLibs/
+
 # Model artifacts (large; produced by ml/ pipeline)
 app/src/main/assets/model/
+# The classifier's instrumented parity test reads the same generated model + a derived fixture,
+# copied in by :analyzer:classifier:copyModelTestAssets. Generated output, same as above.
+analyzer/classifier/src/androidTest/assets/model/
 
 # Session handoff notes and working docs: local-only, never pushed (repo keeps README.md as
 # the only tracked markdown file).

@@ -8,7 +8,7 @@ DATASET ?= data/processed/dataset.jsonl
 RUNS_DIR ?= runs
 ARTIFACTS_DIR ?= artifacts
 
-.PHONY: teacher distill prune export calibrate evaluate
+.PHONY: teacher distill prune export calibrate evaluate parity-fixture
 
 teacher:
 	$(PYTHON) -m scamshield_ml.train_teacher \
@@ -48,3 +48,13 @@ evaluate:
 		--student-dir $(RUNS_DIR)/student_pruned \
 		--state-dict $(RUNS_DIR)/student_pruned/student_pruned.pt \
 		--onnx-model $(ARTIFACTS_DIR)/model.int8.onnx
+
+# The on-device parity fixture: the ground truth the instrumented ClassifierParityTest checks the
+# Android inference path against. Uses the *bundled* quantized model + tokenizer, so run `export`
+# first. `:analyzer:classifier:copyModelTestAssets` copies the output into the test's assets.
+parity-fixture:
+	$(PYTHON) -m scamshield_ml.export_parity_fixture \
+		--onnx-model $(ARTIFACTS_DIR)/model.int8.onnx \
+		--tokenizer $(ARTIFACTS_DIR)/tokenizer.json \
+		--dataset $(DATASET) \
+		--output $(ARTIFACTS_DIR)/parity_fixture.json

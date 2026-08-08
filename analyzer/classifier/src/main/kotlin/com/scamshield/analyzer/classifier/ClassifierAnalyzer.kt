@@ -101,23 +101,38 @@ class ClassifierAnalyzer(
     }
 
     private fun infer(model: LoadedModel, text: String): Signal {
+        val (binary, category) = runModel(model, text)
+        return ClassifierScoring.buildSignal(binary, category, model.temperature)
+    }
+
+    /** The two raw logit heads (`binary_logits`, `category_logits`) for one message. */
+    private fun runModel(model: LoadedModel, text: String): Pair<FloatArray, FloatArray> {
         val encoded = ClassifierScoring.pack(model.tokenizer.encode(text).ids)
         if (encoded.truncated) Log.d(TAG, "message exceeded ${ClassifierScoring.SEQ_LEN} tokens; tail truncated")
 
         // `arrayOf(row)` is a `long[1][SEQ_LEN]` — the batch-of-one shape the graph expects.
         val inputIds = OnnxTensor.createTensor(model.environment, arrayOf(encoded.inputIds))
         val attentionMask = OnnxTensor.createTensor(model.environment, arrayOf(encoded.attentionMask))
-        val binary: FloatArray
-        val category: FloatArray
         inputIds.use { ids ->
             attentionMask.use { mask ->
                 model.session.run(mapOf("input_ids" to ids, "attention_mask" to mask)).use { result ->
-                    binary = floatRow(result, "binary_logits")
-                    category = floatRow(result, "category_logits")
+                    return floatRow(result, "binary_logits") to floatRow(result, "category_logits")
                 }
             }
         }
-        return ClassifierScoring.buildSignal(binary, category, model.temperature)
+    }
+
+    /**
+     * Raw, un-calibrated `p_scam` = `softmax(binary_logits)[1]` for one message, or null if the
+     * model can't be brought up. Exists solely for the instrumented parity gate (design.md §9.5),
+     * which compares against the Python ONNX output — computed the same way, temperature-free — so
+     * a genuine model/tokenizer discrepancy isn't masked by the shared temperature constant.
+     */
+    internal suspend fun rawScamProbabilityForParity(text: String): Float? {
+        val model = ensureLoaded() ?: return null
+        return withContext(ioDispatcher) {
+            ClassifierScoring.softmax(runModel(model, text).first)[1]
+        }
     }
 
     /** Pull the first (batch-of-one) row out of a `[1, N]` float output tensor by name. */
