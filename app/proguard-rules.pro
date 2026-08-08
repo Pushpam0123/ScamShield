@@ -20,6 +20,12 @@
 -keep class ai.djl.huggingface.** { *; }
 -dontwarn ai.djl.**
 
+# DJL transitively pulls in commons-compress, which optionally references commons-lang3 (for
+# archive formats the tokenizer never touches at runtime — it only reads tokenizer.json from a
+# stream). R8 fails on the missing classes; suppress them rather than dragging commons-lang3 in.
+-dontwarn org.apache.commons.compress.**
+-dontwarn org.apache.commons.lang3.**
+
 # Do NOT keep line numbers or source file names in a way that could leak analysed text into
 # a stack trace. Constraint C1: message content never reaches a crash report.
 -renamesourcefileattribute SourceFile

@@ -37,12 +37,39 @@ a raw ML score can't tell you a link goes to a domain registered four days ago, 
 
 ## 🚧 Status: work in progress
 
-This is under active development and not yet usable end to end. The rules engine (domain/URL
-analysis, typosquat and homograph detection, message normalization, language detection) is
-built and tested; the on-device ML classifier, the actual UI, and full end-to-end wiring are
-still being built out. Nothing here is ready to install or rely on yet — treat this as a project
-in motion, not a finished app. Check the commit history for the most honest picture of current
-progress.
+This is under active development and not yet usable end to end. Where things stand:
+
+- **Rules engine — built and tested.** Domain/URL analysis, typosquat and homograph detection,
+  sender-ID validation, scam-phrasing patterns, message normalization, language detection, and the
+  fusion layer that combines them into one explained verdict.
+- **On-device ML classifier — integrated.** The full path is real: an ONNX model + HuggingFace
+  tokenizer run on-device, scored through a calibrated probability, fused with the rules. An
+  instrumented parity gate confirms the on-device output matches the Python reference exactly
+  (max Δ 0.0 across the sample set), so the tokenizer and runtime agree across platforms.
+- **What's *not* done, stated plainly:**
+  - The bundled model is a **toy** (distilbert, English, ~180 rows) used to prove the wiring, not
+    a real classifier. Accuracy numbers are therefore not meaningful yet — with the toy model live,
+    several genuine bank SMS are wrongly flagged. A real multilingual model is the next big piece.
+  - No UI yet — there's a share-sheet entry point and the analysis pipeline, but not the screens.
+  - APK size is over budget: the full ONNX Runtime build plus the tokenizer's native library push
+    it well past the 25 MB target. Hitting that needs ONNX Runtime *Mobile* (reduced-op) and
+    per-ABI app-bundle delivery — noted, not yet done.
+
+Nothing here is ready to install or rely on. Check the commit history for the most honest picture.
+
+### Measured so far (emulator, toy model — directional, not a phone budget)
+
+| What | Observed |
+|---|---|
+| Rule-pack load | ~296 ms |
+| Model cold load + first inference | ~340 ms |
+| Single inference (p50 / p95) | 13 / 28 ms |
+| End-to-end verdict (p50 / p95 / p99) | 177 / 402 / 1238 ms |
+| Peak process memory (PSS) | ~276 MB |
+
+These are from an emulator with software rendering and the toy model; a real device and a
+reduced-op runtime would move them. Real-device Macrobenchmark numbers are deliberately deferred
+rather than faked on an emulator.
 
 ## What it promises, even half-built
 
@@ -51,6 +78,25 @@ progress.
 - **Works even without the ML model.** The rule-based engine alone is meant to be a usable
   product on its own; the model is meant to be an enhancement, not a dependency.
 - **Every verdict comes with a reason.** No unexplained "72% scam" numbers.
+
+## The model (a card, folded in here on purpose)
+
+A standalone `MODEL_CARD.md` is the usual home for this, but this repo deliberately keeps exactly
+one tracked markdown file, so the card lives here until there's a real model worth its own document.
+
+- **What it is:** a small transformer text classifier, distilled and vocabulary-pruned, exported to
+  ONNX and INT8-quantized, with two heads — binary scam/not-scam (temperature-calibrated) and a
+  13-way scam category. Runs on-device via ONNX Runtime with a HuggingFace tokenizer.
+- **What's bundled today:** a **toy** model (DistilBERT teacher, ~180 English rows from the public
+  UCI SMS Spam Collection). It exists to prove the on-device path end to end, **not** to classify
+  real scams. It knows nothing of Hindi, romanized Hinglish, or Indian bank SMS.
+- **Intended use:** one signal among several, fused with deterministic rules — never the sole basis
+  for a verdict. The rules alone are the shipped guarantee; the model is an enhancement.
+- **Known limitations:** English-only and tiny, so accuracy numbers are not meaningful; with the toy
+  model live it wrongly flags genuine bank SMS. It is therefore **not bundled in release builds** by
+  default (the model assets are generated, git-ignored, and copied in only for local testing).
+- **Privacy:** inference is fully on-device. No message text is transmitted for classification, ever.
+- **Reproduce:** `cd ml && make teacher distill prune export calibrate` (see `ml/` for the pipeline).
 
 ## Building
 
