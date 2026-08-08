@@ -1,6 +1,7 @@
 package com.scamshield.core.analysis.url
 
 import com.scamshield.core.model.PublicSuffixList
+import com.scamshield.core.model.net.isIpLiteralHost
 import java.net.IDN
 import java.util.Locale
 
@@ -41,7 +42,7 @@ class PublicSuffixListParser private constructor(
 ) : PublicSuffixList {
 
     override fun registrableDomain(host: String): String? {
-        if (isIpLiteral(host)) return null
+        if (isIpLiteralHost(host)) return null
 
         val asciiHost = toAsciiLabels(host) ?: return null
         if (asciiHost.isEmpty()) return null
@@ -87,21 +88,6 @@ class PublicSuffixListParser private constructor(
         return hostLabels.takeLast(registrableLabelCount).joinToString(".")
     }
 
-    /**
-     * `design.md`'s test fixtures include `http://192.168.1.1/login`, a bare IPv4 host with
-     * no registrable domain at all. Detected with plain regex, not `InetAddress`: the latter
-     * can trigger a DNS lookup for non-literal input, and a URL-forensics module handling raw
-     * scam-message text must not go anywhere near a network API even by accident
-     * (`architecture.md` section 10.1).
-     */
-    private fun isIpLiteral(host: String): Boolean {
-        val stripped = host.trim().removeSurrounding("[", "]")
-        if (IPV4_LITERAL.matches(stripped)) {
-            return stripped.split(".").all { (it.toIntOrNull() ?: -1) in 0..255 }
-        }
-        return stripped.contains(':') && IPV6_LITERAL.matches(stripped)
-    }
-
     /** Punycode-encodes and lowercases; returns null for a host that IDN cannot process. */
     private fun toAsciiLabels(host: String): List<String>? {
         val trimmed = host.trim().trim('.')
@@ -117,9 +103,6 @@ class PublicSuffixListParser private constructor(
     }
 
     companion object {
-        private val IPV4_LITERAL = Regex("^\\d{1,3}(\\.\\d{1,3}){3}$")
-        private val IPV6_LITERAL = Regex("^[0-9a-fA-F:]+$")
-
         /** [ruleLines] is one PSL rule per line, no comments, no blank lines. */
         fun parse(ruleLines: List<String>): PublicSuffixListParser {
             val plain = mutableSetOf<List<String>>()

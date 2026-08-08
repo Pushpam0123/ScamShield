@@ -13,6 +13,7 @@ import com.scamshield.core.model.ScamCategory
 import com.scamshield.core.model.Severity
 import com.scamshield.core.model.Signal
 import com.scamshield.core.model.Verdict
+import com.scamshield.core.model.net.isIpLiteralHost
 
 /**
  * design.md section 3: the highest-precision analyzer, the only one besides the sender
@@ -63,7 +64,7 @@ class UrlAnalyzer(
     private suspend fun evidenceFor(url: ExtractedUrl): List<Evidence> {
         val span = url.spanStart until url.spanEnd
 
-        if (isIpLiteral(url.host)) {
+        if (isIpLiteralHost(url.host)) {
             // No registrable domain to run the rest of the checks against.
             return listOf(Evidence(EvidenceType.IP_ADDRESS_HOST, Severity.CRITICAL, mapOf("host" to url.host), span))
         }
@@ -207,15 +208,6 @@ class UrlAnalyzer(
         return host.split('.').takeLast(labelCount).joinToString(".")
     }
 
-    /** Duplicated (not shared) from `:core:analysis`'s PSL parser -- see DECISIONS.md. */
-    private fun isIpLiteral(host: String): Boolean {
-        val stripped = host.trim().removeSurrounding("[", "]")
-        if (IPV4_LITERAL.matches(stripped)) {
-            return stripped.split(".").all { (it.toIntOrNull() ?: -1) in 0..255 }
-        }
-        return stripped.contains(':') && IPV6_LITERAL.matches(stripped)
-    }
-
     private fun scoreFrom(evidence: List<Evidence>): Float =
         when (evidence.maxOfOrNull { it.severity }) {
             Severity.CRITICAL -> 0.9f
@@ -239,9 +231,6 @@ class UrlAnalyzer(
     }
 
     companion object {
-        private val IPV4_LITERAL = Regex("^\\d{1,3}(\\.\\d{1,3}){3}$")
-        private val IPV6_LITERAL = Regex("^[0-9a-fA-F:]+$")
-
         // design.md section 3.4: /(login|verify|kyc|update|otp|pay)/i
         private val CREDENTIAL_PATH = Regex("(login|verify|kyc|update|otp|pay)", RegexOption.IGNORE_CASE)
     }
