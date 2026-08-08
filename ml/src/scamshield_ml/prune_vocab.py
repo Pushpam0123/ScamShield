@@ -97,9 +97,8 @@ def build_id_remap(kept_ids: list[int]) -> dict[int, int]:
 
 
 def _assert_wordlevel(tokenizer: PreTrainedTokenizerBase) -> None:
-    """The gate for the WordPiece simplification documented at the top of this module. Rather than
-    silently rebuild a WordPiece tokenizer as WordLevel (which would mis-segment every kept word
-    whose subword pieces changed), refuse and spell out exactly what a real Stage C run must add.
+    """Gate for the WordPiece simplification (see module docstring): refuse a non-WordLevel input
+    rather than silently rebuild it as WordLevel and mis-segment, spelling out what a real run needs.
     """
     backend = getattr(tokenizer, "backend_tokenizer", None)
     model_class = type(backend.model).__name__ if backend is not None else "WordLevel"

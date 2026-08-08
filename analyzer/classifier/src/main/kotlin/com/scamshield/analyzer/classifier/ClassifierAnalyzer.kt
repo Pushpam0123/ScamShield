@@ -17,21 +17,18 @@ import kotlinx.coroutines.withContext
 import java.io.Closeable
 
 /**
- * design.md §6: the on-device ML classifier, run through ONNX Runtime Mobile with a HuggingFace
- * tokenizer. It is the one analyzer expected to sometimes be absent (architecture.md C6): a
- * missing/corrupt model, a session-creation failure, or an inference exception all degrade to
- * [Signal.Unavailable], never a crash — the whole app stays usable on the rule analyzers alone.
+ * design.md §6: the on-device ML classifier (ONNX Runtime + HuggingFace tokenizer). The one
+ * analyzer expected to sometimes be absent (architecture.md C6): a missing/corrupt model, a
+ * session-creation failure, or an inference exception all degrade to [Signal.Unavailable], never a
+ * crash.
  *
- * **Loading is lazy and happens at most once**, on [ioDispatcher], guarded by [loadMutex] so a
- * burst of concurrent [analyze] calls (the orchestrator fans all analyzers out at once) creates
- * exactly one ONNX session. A load that throws is remembered ([loadFailed]) so we don't retry a
- * broken model on every message. The ONNX Runtime session is created with a single intra-op
- * thread (design.md §6 / implementation.md Phase 4) — this runs alongside three other analyzers
- * and a UI, and a phone's few big cores are better left for them than saturated by one matmul.
+ * Loading is lazy and happens at most once, on [ioDispatcher], guarded by [loadMutex] so the
+ * orchestrator's concurrent fan-out creates exactly one session; a load that throws is remembered
+ * ([loadFailed]) so a broken model isn't retried per message. The session uses a single intra-op
+ * thread (design.md §6) — the phone's big cores are better left for the other analyzers and the UI.
  *
- * Inference itself is the [ClassifierScoring] object's problem, kept pure so it unit-tests on the
- * JVM; this class owns only the native edges — the DJL tokenizer encode and the ONNX Runtime run —
- * which is why they, and only they, are wrapped in the degrade-to-[Signal.Unavailable] catch.
+ * The scoring math lives in the pure [ClassifierScoring]; this class owns only the native edges
+ * (tokenizer encode, ONNX run), which is why only those are wrapped in the degrade catch.
  */
 class ClassifierAnalyzer(
     private val assets: ClassifierAssets,
@@ -123,10 +120,9 @@ class ClassifierAnalyzer(
     }
 
     /**
-     * Raw, un-calibrated `p_scam` = `softmax(binary_logits)[1]` for one message, or null if the
-     * model can't be brought up. Exists solely for the instrumented parity gate (design.md §9.5),
-     * which compares against the Python ONNX output — computed the same way, temperature-free — so
-     * a genuine model/tokenizer discrepancy isn't masked by the shared temperature constant.
+     * Raw, un-calibrated `p_scam` = `softmax(binary_logits)[1]`, or null if the model can't load.
+     * Solely for the instrumented parity gate (design.md §9.5): it compares against the Python ONNX
+     * output computed the same temperature-free way, so a discrepancy isn't masked by the shared T.
      */
     internal suspend fun rawScamProbabilityForParity(text: String): Float? {
         val model = ensureLoaded() ?: return null

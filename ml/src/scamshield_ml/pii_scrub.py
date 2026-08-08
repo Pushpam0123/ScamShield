@@ -4,21 +4,16 @@ published dataset." Runs at ingest, inside `collect.py`, and nowhere else -- an 
 must never reach disk, so there is deliberately no code path that writes a `Row` without going
 through `scrub()` first.
 
-**Names -- the decision (Phase 4).** General personal-name scrubbing needs NER: a bare regex over
-free text either misses most names or falsely scrubs ordinary capitalized words (brands, places,
-"OTP"), and a labeler trusting a broken scrubber is worse than one who knows it is partial. So this
-module does *two* things rather than drift on the gap:
+**Names -- the decision (Phase 4).** General name scrubbing needs NER; a bare regex either misses
+most names or falsely scrubs ordinary capitalized words. So this module does two things:
 
-  1. It scrubs the one name pattern that IS high-precision and is by far the most common name leak
-     in real SMS -- the salutation-anchored name ("Dear Rahul,", "Hi Priya Sharma", "Mr. Kumar").
-     Anchoring on a salutation keyword + a Title-case token keeps false positives near zero
-     (generic addressees like "Dear Customer" are stop-listed; all-caps brands like "Dear SBI" do
-     not match Title-case), while catching the leak that actually shows up. See [_scrub_names].
-  2. It leaves general in-body names to a real NER pass, which stays an explicit **hard gate** one
-     level up: `collect.collect` refuses any source not on its public-dataset allowlist unless the
-     caller passes `--names-verified`, so real at-volume collection cannot write rows to disk until
-     NER is wired and a human has signed off. That converts "known gap in a doc comment" into
-     "blocked in code" -- see `collect.py` and `LABELING_GUIDE.md`.
+  1. Scrubs the one high-precision, most-common leak: the salutation-anchored name ("Dear Rahul,",
+     "Hi Priya Sharma", "Mr. Kumar"). Anchoring on a salutation + a Title-case token keeps false
+     positives near zero (generic addressees are stop-listed; all-caps brands don't match). See
+     [_scrub_names].
+  2. Leaves general in-body names to a real NER pass, gated one level up: `collect.collect` refuses
+     any source off its allowlist unless `--names-verified` is passed -- so at-volume collection is
+     blocked in code, not just flagged in a comment. See `collect.py` and `LABELING_GUIDE.md`.
 """
 
 from __future__ import annotations
@@ -39,12 +34,11 @@ _AMOUNT = re.compile(r"(?:₹|rs\.?|inr)\s?[\d,]+(?:\.\d+)?", re.IGNORECASE)
 # Deliberately after PHONE and AMOUNT so it only catches what neither of those already claimed.
 _ACCOUNT = re.compile(r"(?<!\d)\d{9,18}(?!\d)")
 
-# A salutation keyword (case-insensitive) followed by a Title-case name of one or two words. The
-# Title-case requirement (`[A-Z][a-z]+`) is what keeps this precise: it matches "Rahul" / "Priya
-# Sharma" but not all-caps brands ("SBI") or the generic addressees stop-listed below. Group 1 is
-# the salutation (kept), group 2 is the name (replaced).
+# A salutation (group 1, kept) + a Title-case name of one or two words (group 2, replaced). The
+# leading \b stops "hi"/"ms"/etc. matching inside words ("Delhi"); Title-case-only excludes all-caps
+# brands ("SBI") and the generic addressees stop-listed below.
 _SALUTATION_NAME = re.compile(
-    r"((?i:dear|hi|hello|hey|mr|mrs|ms|shri|smt|dr)\.?)\s+"
+    r"\b((?i:dear|hi|hello|hey|mr|mrs|ms|shri|smt|dr)\.?)\s+"
     r"([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)"
 )
 

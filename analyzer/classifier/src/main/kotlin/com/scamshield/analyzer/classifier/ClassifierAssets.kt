@@ -4,15 +4,12 @@ import android.content.Context
 import java.io.InputStream
 
 /**
- * How [ClassifierAnalyzer] reaches its three on-device asset files, abstracted behind an
- * interface so the analyzer can be unit-tested on the JVM with a fake that supplies bytes (or
- * throws) — the real ONNX Runtime / DJL tokenizer loads need native libraries and only run in an
- * instrumented test (design.md §6, Phase 4 parity gate).
+ * How [ClassifierAnalyzer] reaches its three on-device asset files, behind an interface so the
+ * analyzer unit-tests on the JVM with a fake (the real ONNX/DJL loads need native libraries).
  *
- * The three files are produced by the `ml/` pipeline and copied into `assets/model/` by
- * `:app`'s `copyModelAssets` task (see `app/build.gradle.kts`). They are gitignored generated
- * output; when they're absent, every method here throws, and the analyzer degrades to
- * `Signal.Unavailable` (architecture.md C6) rather than failing the app.
+ * The files are produced by `ml/` and copied into `assets/model/` by `:app`'s `copyModelAssets`
+ * task; they're gitignored generated output, and when absent every method throws so the analyzer
+ * degrades to `Signal.Unavailable` (architecture.md C6).
  */
 interface ClassifierAssets {
     /** The quantized ONNX model bytes (`assets/model/model.onnx`). */
@@ -26,9 +23,8 @@ interface ClassifierAssets {
 }
 
 /**
- * The production [ClassifierAssets], reading from the app's packaged assets. Constructed in
- * `:app`'s Hilt graph (Phase 4) with the application [Context]; kept out of [ClassifierAnalyzer]
- * itself so the analyzer has no Android-asset dependency to stand in the way of JVM unit tests.
+ * The production [ClassifierAssets], reading from the app's packaged assets. Kept out of
+ * [ClassifierAnalyzer] itself so the analyzer has no Android-asset dependency blocking JVM tests.
  */
 class AndroidClassifierAssets(
     private val context: Context,

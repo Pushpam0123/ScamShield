@@ -14,27 +14,18 @@ import java.io.InputStream
 import kotlin.math.abs
 
 /**
- * design.md §9.5's headline Phase 4 acceptance row — the on-device parity gate:
+ * design.md §9.5's headline Phase 4 acceptance row: the same samples through the Android classifier
+ * match the ONNX Python output within 0.02 ("a mismatch is almost always a tokenizer discrepancy —
+ * fix the tokenizer, not the thresholds").
  *
- *   "the same samples through the Android classifier match the ONNX Python output within 0.02.
- *    A mismatch here is almost always a tokenizer discrepancy — fix the tokenizer, do not adjust
- *    thresholds."
+ * The fixture is written by `ml/export_parity_fixture.py` from the *same* model + tokenizer this
+ * test loads, so any delta > 0.02 is a real cross-runtime disagreement (DJL vs Rust tokenizers, or
+ * ORT Mobile vs desktop INT8), not noise. This also discharges D-009 (the DJL tokenizer had never
+ * been byte-confirmed against the training `tokenizer.json`). Both sides use raw, temperature-free
+ * `softmax(binary_logits)[1]`.
  *
- * The fixture (`assets/model/parity_fixture.json`) is written by `ml/export_parity_fixture.py`
- * from the *same* `model.int8.onnx` + `tokenizer.json` this test loads, so any delta above 0.02
- * is a real cross-runtime disagreement — the DJL tokenizer diverging from the Rust `tokenizers`
- * one, or ORT Mobile's INT8 kernels from ORT desktop's — not noise. This also finally discharges
- * D-009: the DJL tokenizer had never been byte-confirmed against the training `tokenizer.json`.
- *
- * Both sides use raw `softmax(binary_logits)[1]`, temperature-free (see
- * [ClassifierAnalyzer.rawScamProbabilityForParity]).
- *
- * What this run verifies: the toy model's `WordLevel` tokenizer (§9/§10). A real MuRIL-family run
- * would ship a WordPiece tokenizer and must re-clear this gate — the assertion is model-agnostic,
- * only the bundled assets change.
- *
- * The assets are gitignored generated output; on a checkout without a trained model the test
- * assumes-out rather than failing (architecture.md C6 — absence is a valid state).
+ * Verifies the toy model's `WordLevel` tokenizer; a real WordPiece model must re-clear the same
+ * (model-agnostic) gate. Assets are gitignored — without a bundled model the test assumes-out (C6).
  */
 @RunWith(AndroidJUnit4::class)
 class ClassifierParityTest {

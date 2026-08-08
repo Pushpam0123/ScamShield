@@ -1,24 +1,18 @@
-"""Export the on-device parity fixture (design.md section 9.5's parity gate, from the Android
-side this time).
+"""Export the on-device parity fixture (design.md §9.5, from the Android side).
 
-`evaluate.py`'s `parity_gate` proves the exported ONNX model agrees with the PyTorch student on
-the *host*. It does not prove that the model, once bundled into the app and driven through the
-DJL tokenizer + ONNX Runtime Mobile, still produces those same numbers -- and design.md is blunt
-that a mismatch there is "almost always a tokenizer discrepancy". This script writes the ground
-truth that the instrumented test (`ClassifierParityTest`) checks against: a fixed set of texts and
-each one's `p_scam` as computed *here*, from the same `model.int8.onnx` and `tokenizer.json` that
-get copied into `assets/model/`.
+`evaluate.py`'s `parity_gate` proves the ONNX model matches the PyTorch student on the host; it
+does not prove the model, once driven through DJL + ONNX Runtime on the app, still matches. This
+writes the ground truth the instrumented `ClassifierParityTest` checks: a fixed set of texts and
+each one's `p_scam`, computed here from the same `model.int8.onnx` and `tokenizer.json` the app
+bundles.
 
-`p_scam` is the raw `softmax(binary_logits)[1]` -- no temperature. Parity is about the model and
-the tokenizer matching across runtimes; temperature is a fixed downstream constant applied
-identically on both sides, so it would only hide a discrepancy, never reveal one. (This matches
-`evaluate.py:_softmax_scam_prob`, deliberately.)
+`p_scam` is the raw `softmax(binary_logits)[1]` -- no temperature (a fixed constant applied
+identically on both sides would only hide a discrepancy; matches `evaluate.py:_softmax_scam_prob`).
 
-The tokenizer is loaded with the `tokenizers` Rust library straight from `tokenizer.json` -- the
-exact same artifact, and the exact same implementation, that DJL's `HuggingFaceTokenizer` loads on
-device. Padding is forced to the full `max_seq_len` with `pad_id=0`; the attention mask zeroes it
-out, so the ONNX output is identical whatever the padded length, and this keeps the input_ids
-byte-for-byte what `ClassifierScoring.pack` builds in Kotlin.
+The tokenizer is loaded with the `tokenizers` Rust library from `tokenizer.json` -- the same
+artifact and implementation DJL loads on device. Padding is forced to `max_seq_len` with pad_id=0
+(mask-zeroed, so output is padding-independent), keeping input_ids byte-identical to
+`ClassifierScoring.pack`.
 """
 
 from __future__ import annotations

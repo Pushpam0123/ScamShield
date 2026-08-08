@@ -97,8 +97,7 @@ object AnalysisModule {
         AnalysisPipeline(
             orchestrator = orchestrator,
             rulepackVersion = loadedRulePack.rulePack.meta.version,
-            // Provenance only: read the bundled model's version if there is one. Absent asset or a
-            // toy meta.json with no version field → null, and the result simply carries no model tag.
+            // Provenance only; null when no model/version is bundled (the toy meta carries none).
             modelVersion = runCatching { parseClassifierMeta(classifierAssets.readMetaJson()).modelVersion }.getOrNull(),
         )
 

@@ -28,9 +28,8 @@ from .jsonl_io import write_jsonl
 from .pii_scrub import scrub
 from .schema import LANGUAGES, Row
 
-# Sources known to carry no personal names (or to be already-public research corpora), so the
-# incomplete name scrubbing (pii_scrub.py: numbers + salutations only, no general NER) is
-# acceptable. Anything else is gated behind an explicit human `--names-verified` sign-off.
+# Public/name-free sources where pii_scrub's partial name scrubbing is acceptable; anything else is
+# gated behind an explicit `--names-verified` sign-off.
 PUBLIC_NAME_SAFE_SOURCES = frozenset({"uci_sms_spam_collection"})
 
 
@@ -64,10 +63,9 @@ def collect(
     and an English one are two separate runs, not one mixed-language CSV with a language
     column to get wrong).
 
-    The name-scrubbing gate (see pii_scrub.py): personal names in the message *body* are not
-    scrubbed by regex alone. Unless [source] is on [PUBLIC_NAME_SAFE_SOURCES] or [names_verified]
-    is set (a human confirming names were handled out-of-band, e.g. by an NER pass), this refuses
-    to proceed -- so at-volume collection cannot silently write name-bearing rows to disk.
+    Name gate (see pii_scrub.py): in-body names aren't regex-scrubbable, so unless [source] is on
+    [PUBLIC_NAME_SAFE_SOURCES] or [names_verified] is set, this refuses -- at-volume collection
+    can't silently write name-bearing rows to disk.
     """
     if lang not in LANGUAGES:
         raise ValueError(f"unknown language: {lang!r}")

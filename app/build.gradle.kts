@@ -137,11 +137,9 @@ tasks.register<Copy>("copyModelAssets") {
     onlyIf { quantizedModelFile.exists() }
 }
 
-// The Phase 4 live-pipeline instrumented test (ClassifierRegressionTest) checks the *same* Phase 1
-// fixture corpus (design.md §12) that VerdictFixtureTest uses, but with the classifier actually
-// running on-device. That corpus lives in the JVM test source set; androidTest can't read it there,
-// so copy it into androidTest assets. Gitignored generated output; wired into the test build so it
-// is always fresh.
+// The live-pipeline instrumented tests reuse the Phase 1 fixture corpus (design.md §12), which
+// lives in the JVM test source set where androidTest can't read it — copy it into androidTest
+// assets. Gitignored; wired into the test build so it stays fresh.
 val copyFixtureCorpus = tasks.register<Copy>("copyFixtureCorpus") {
     from(layout.projectDirectory.file("src/test/resources/fixtures/verdicts.json"))
     into(layout.projectDirectory.dir("src/androidTest/assets/fixtures"))

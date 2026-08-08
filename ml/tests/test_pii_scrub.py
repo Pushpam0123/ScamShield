@@ -48,6 +48,12 @@ def test_does_not_mistake_an_all_caps_brand_after_a_salutation_for_a_name():
     assert scrub("Dear SBI user, update KYC") == "Dear SBI user, update KYC"
 
 
+def test_salutation_match_requires_a_word_boundary():
+    # "hi" inside "Delhi" (and similar) must not trigger the salutation name pass.
+    assert scrub("Priya lives in Delhi Ram Nagar") == "Priya lives in Delhi Ram Nagar"
+    assert scrub("meet at Ranchi Kumar street") == "meet at Ranchi Kumar street"
+
+
 def test_multiple_pii_items_in_one_message():
     text = "Rs.2,500.00 debited from A/c XX998877665544. Not you? Call 9876543210."
     scrubbed = scrub(text)

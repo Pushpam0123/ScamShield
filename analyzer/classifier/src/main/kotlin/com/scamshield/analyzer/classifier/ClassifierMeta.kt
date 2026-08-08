@@ -5,17 +5,14 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * The subset of `meta.json` (written by `ml/calibrate.py`) this analyzer needs: the temperature
- * `T` fitted on the validation set (design.md §6.2). `p_scam` is only meaningful after dividing
- * the binary logits by `T` — the fusion policy's thresholds assume a calibrated probability, so
- * a missing or unparseable temperature is a hard load failure, not a silent default to 1.0.
+ * The subset of `meta.json` (written by `ml/calibrate.py`) this analyzer needs. [temperature] `T`
+ * is fitted on the validation set (design.md §6.2); `p_scam` is only meaningful after dividing the
+ * binary logits by it, so a missing/unparseable temperature is a hard load failure, not a default.
  *
- * [modelVersion] is optional provenance stamped onto every [com.scamshield.core.model.AnalysisResult]
- * (Phase 4). The current toy `meta.json` carries no version, so it stays null until a real trained
- * model writes one — null is the honest value, not a fabricated tag.
+ * [modelVersion] is optional provenance for [com.scamshield.core.model.AnalysisResult]; the toy
+ * `meta.json` carries none, so it stays null until a real model writes one.
  *
- * `meta.json` also carries diagnostic fields (`nll_before`, `nll_after`, `val_rows`) this
- * doesn't model; [json] ignores them rather than failing to parse.
+ * [json] ignores the diagnostic fields (`nll_before`, `nll_after`, `val_rows`) rather than failing.
  */
 @Serializable
 data class ClassifierMeta(

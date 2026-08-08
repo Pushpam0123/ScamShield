@@ -7,9 +7,7 @@ plugins {
 android {
     namespace = "com.scamshield.analyzer.classifier"
     compileSdk = libs.versions.compileSdk.get().toInt()
-    // Not for compiling native code (there is none) — only so `android.ndkDirectory` resolves for
-    // the vendorNativeStl task, which lifts libc++_shared.so out of the NDK for DJL's tokenizer.
-    ndkVersion = libs.versions.ndk.get()
+    ndkVersion = libs.versions.ndk.get() // only so android.ndkDirectory resolves for vendorNativeStl
     defaultConfig {
         minSdk = libs.versions.minSdk.get().toInt()
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -20,11 +18,9 @@ android {
     }
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
 
-    // DJL's `libdjl_tokenizer.so` is linked against the shared C++ runtime but neither it nor
-    // `onnxruntime-android` ships `libc++_shared.so`, so the tokenizer fails to `dlopen` at runtime
-    // (a load failure the analyzer degrades on — but then it can never actually classify). We vend
-    // the STL ourselves from `src/main/jniLibs` (see that dir's README); `pickFirst` keeps a future
-    // native dep that also bundles it from breaking the merge.
+    // DJL's libdjl_tokenizer.so dlopens libc++_shared.so, which neither it nor onnxruntime-android
+    // ships; we vendor it into src/main/jniLibs (see vendorNativeStl). pickFirst guards the merge if
+    // a future native dep also bundles it.
     packaging {
         jniLibs {
             pickFirsts += "**/libc++_shared.so"
@@ -40,12 +36,10 @@ android {
     }
 }
 
-// The instrumented parity test (design.md section 9.5) needs the real bundled model, tokenizer,
-// and calibration meta plus the Python-side reference fixture — all gitignored generated output
-// from the `ml/` pipeline. This mirrors `:app:copyModelAssets`: an on-demand copy, deliberately
-// NOT wired into the build graph, so a fresh checkout without a trained model still compiles and
-// its JVM tests pass (the parity test simply has no assets to run against). Regenerate with
-// `cd ml && make export parity-fixture`, then `./gradlew :analyzer:classifier:copyModelTestAssets`.
+// The instrumented parity test (design.md §9.5) needs the bundled model/tokenizer/meta + the
+// Python reference fixture, all gitignored `ml/` output. On-demand like `:app:copyModelAssets` (not
+// wired into the graph, so a checkout without a model still compiles). Regenerate with
+// `cd ml && make export parity-fixture`, then `:analyzer:classifier:copyModelTestAssets`.
 val mlArtifactsDir = rootProject.layout.projectDirectory.dir("ml/artifacts").asFile
 val quantizedModelFile = mlArtifactsDir.resolve("model.int8.onnx")
 tasks.register<Copy>("copyModelTestAssets") {
@@ -60,11 +54,9 @@ tasks.register<Copy>("copyModelTestAssets") {
     onlyIf { quantizedModelFile.exists() }
 }
 
-// Copy `libc++_shared.so` for every ABI the native deps ship out of the configured NDK into
-// `src/main/jniLibs` (see the packaging note above for why it's needed). On-demand and gitignored
-// like the model assets: a checkout without an NDK still compiles and runs the JVM tests; the
-// instrumented parity test needs it, so it's a documented one-liner. Run
-// `./gradlew :analyzer:classifier:vendorNativeStl` (with `sdk.dir` + an installed NDK).
+// Copy libc++_shared.so for every ABI the native deps ship out of the configured NDK into
+// src/main/jniLibs (see the packaging note above). On-demand and gitignored like the model assets;
+// run `:analyzer:classifier:vendorNativeStl` with an installed NDK.
 val stlAbis = listOf(
     "arm64-v8a" to "aarch64-linux-android",
     "armeabi-v7a" to "arm-linux-androideabi",

@@ -33,25 +33,18 @@ import java.time.Instant
 import java.util.UUID
 
 /**
- * §12 day 4: the Phase 1 fixture corpus (design.md §12) re-run through the *live* on-device
- * pipeline — the same MessageNormalizer → three rule analyzers → FusionPolicy stack as
- * VerdictFixtureTest, but now with a fourth analyzer, the real [ClassifierAnalyzer], running ONNX
- * Runtime + the DJL tokenizer on the emulator. VerdictFixtureTest stays as the rules-only (JVM)
- * guarantee; this is its classifier-live counterpart, which can only run instrumented.
+ * The Phase 1 fixture corpus (design.md §12) re-run through the *live* on-device pipeline — the same
+ * stack as VerdictFixtureTest but with the real [ClassifierAnalyzer] running on the emulator.
  *
- * The real gates here are model-quality-independent:
- *  - in the *shipped* configuration (no model bundled → classifier Unavailable) the genuine-bank
- *    subset stays SAFE — design.md's zero-tolerance safety row, on the config that actually ships
- *    (the model assets are gitignored, absent from any release build); and
- *  - with a model present but its asset removed, the pipeline falls straight back to those same
- *    rule verdicts, never a crash (architecture.md C6 / implementation.md Phase 4).
+ * Model-quality-independent gates: in the *shipped* config (no model bundled → classifier
+ * Unavailable) genuine bank SMS stay SAFE (the zero-tolerance safety row, on the config that
+ * actually ships — model assets are gitignored/absent from releases); and a present-then-removed
+ * model degrades to identical rule verdicts, never a crash (architecture.md C6).
  *
- * The corpus also runs against the *toy* model (§10) live, but that path is **reported, never
- * asserted**: the toy model is English-spam-trained and scores several genuine bank SMS as scammy,
- * so a "bank SMS stays SAFE with the model live" assertion would fail — and honestly so. That is an
- * accuracy-dependent row §12 explicitly says not to gate on until a real model exists, and
- * [reportGenuineBankSafetyWithToyModelLive] records the real number instead of hiding it. Re-arm it
- * as a hard gate when a real model lands.
+ * The toy model live is **reported, never asserted**: it scores several genuine bank SMS as scammy,
+ * so a "SAFE with the model live" assertion would fail honestly — an accuracy-dependent row §12 says
+ * not to gate on until a real model exists. [reportGenuineBankSafetyWithToyModelLive] records the
+ * real number; re-arm the gate when a real model lands.
  */
 @RunWith(AndroidJUnit4::class)
 class ClassifierRegressionTest {
@@ -169,12 +162,7 @@ class ClassifierRegressionTest {
         }
     }
 
-    /**
-     * Not a gate — a recorded measurement (toy model). Reports how the live classifier moved
-     * verdicts versus rules-only across the whole corpus, so a human reading the run log can see
-     * the direction of travel design.md §7 predicts (wording-only messages becoming able to leave
-     * SAFE). Asserts only that the pipeline never throws.
-     */
+    /** Recorded, not a gate (toy model): how the live classifier moved verdicts vs rules-only. */
     @Test
     fun reportClassifierMovement() = runTest {
         val live = pipeline(liveAnalyzers)

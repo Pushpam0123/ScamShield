@@ -29,18 +29,13 @@ import java.util.UUID
 import kotlin.system.measureTimeMillis
 
 /**
- * §12 day 5: the Phase 4 latency / memory / size measurements (design.md §11, DECISIONS.md D-007).
+ * Phase 4 latency / memory / size measurements (design.md §11, D-007). In-process instrumented
+ * timings, **not** a Macrobenchmark module: macrobenchmark is only trustworthy on a real device, and
+ * method-level timings (load, one inference, e2e fusion) are truer in-process anyway. The real-device
+ * macrobenchmark run stays deferred, not faked.
  *
- * These are deliberately in-process instrumented timings, **not** a Macrobenchmark module. D-007's
- * cold-start / frame-timing case is what Macrobenchmark exists for, and it only yields trustworthy
- * numbers on a real, unlocked device — on the CI emulator it is explicitly meaningless. Method-level
- * timings (model load, one inference, end-to-end fusion) are measured more faithfully in-process
- * anyway. So this records the numbers that ARE meaningful here, honestly caveated; the real-device
- * Macrobenchmark run stays deferred (see MODEL_CARD / README notes), not faked.
- *
- * Nothing here asserts design.md's hardware thresholds (≤400 ms load, ≤150 ms p95 e2e, ≤220 MB peak):
- * asserting a phone budget against an emulator would be a fabricated pass. It asserts only that the
- * path runs and completes, and prints the observed numbers for the run log.
+ * Nothing here asserts design.md's phone thresholds (asserting a phone budget on an emulator would be
+ * a fabricated pass) — it asserts only that the path runs, and prints the observed numbers.
  */
 @RunWith(AndroidJUnit4::class)
 class ClassifierMeasurementsTest {
@@ -120,11 +115,9 @@ class ClassifierMeasurementsTest {
     }
 
     /**
-     * The privacy claim the whole project rests on, exercised: the full pipeline produces a real,
-     * classifier-influenced verdict with no network reachable from these modules. This is the
-     * "airplane-mode: full functionality" acceptance (design.md §11) expressed as a test — the
-     * analyzer/core modules declare no network dependency, so the verdict below cannot come from a
-     * server. The absence of any network API is separately enforced by the day-7 security review.
+     * The "airplane-mode: full functionality" acceptance (design.md §11): the full pipeline produces
+     * a real verdict with no network reachable from these modules (they declare none), so the verdict
+     * can't come from a server. Absence of any network API is enforced by the security review.
      */
     @Test
     fun fullFunctionalityWithoutNetwork() = runTest {
