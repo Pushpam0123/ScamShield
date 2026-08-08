@@ -47,6 +47,9 @@ analyzer/classifier/src/main/jniLibs/
 
 # Model artifacts (large; produced by ml/ pipeline)
 app/src/main/assets/model/
+# Fixture corpus copied into androidTest assets by :app:copyFixtureCorpus (canonical copy lives
+# in app/src/test/resources/fixtures/).
+app/src/androidTest/assets/fixtures/
 # The classifier's instrumented parity test reads the same generated model + a derived fixture,
 # copied in by :analyzer:classifier:copyModelTestAssets. Generated output, same as above.
 analyzer/classifier/src/androidTest/assets/model/

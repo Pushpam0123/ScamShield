@@ -1,6 +1,10 @@
 package com.scamshield.app.di
 
 import android.content.Context
+import com.scamshield.analyzer.classifier.AndroidClassifierAssets
+import com.scamshield.analyzer.classifier.ClassifierAnalyzer
+import com.scamshield.analyzer.classifier.ClassifierAssets
+import com.scamshield.analyzer.classifier.parseClassifierMeta
 import com.scamshield.analyzer.pattern.PatternAnalyzer
 import com.scamshield.analyzer.sender.SenderAnalyzer
 import com.scamshield.analyzer.url.UrlAnalyzer
@@ -22,11 +26,11 @@ import javax.inject.Singleton
  * (concrete classes, each in its own `:analyzer:*` module) are constructed and bound to the
  * `Analyzer` interface `:core:analysis`'s `Orchestrator` depends on.
  *
- * The classifier analyzer has no entry here: Phase 1 ships with it permanently absent
- * (architecture.md C6 / `implementation.md` Phase 1's own scope -- "with the classifier signal
- * permanently `Unavailable`"). `FusionPolicy` already treats a classifier id missing from the
- * signal list the same as an explicit `Signal.Unavailable`, so simply not including it here is
- * sufficient; Phase 4 adds a fourth `@Provides` function and one more entry in the list below.
+ * Phase 4 adds the classifier as the fourth analyzer (see [provideClassifierAnalyzer]). It is
+ * bound unconditionally: when no model asset is bundled it self-degrades to `Signal.Unavailable`,
+ * and `FusionPolicy` renormalizes the remaining weights exactly as it did when the binding was
+ * absent (architecture.md C6). So "no model trained yet" and "model present" run the identical
+ * graph — only the runtime signal differs.
  */
 @Module
 @InstallIn(SingletonComponent::class)
@@ -56,6 +60,15 @@ object AnalysisModule {
     fun providePatternAnalyzer(loadedRulePack: LoadedRulePack): PatternAnalyzer =
         PatternAnalyzer(loadedRulePack.rulePack.patterns)
 
+    @Provides
+    @Singleton
+    fun provideClassifierAssets(@ApplicationContext context: Context): ClassifierAssets =
+        AndroidClassifierAssets(context)
+
+    @Provides
+    @Singleton
+    fun provideClassifierAnalyzer(assets: ClassifierAssets): ClassifierAnalyzer = ClassifierAnalyzer(assets)
+
     // `List<Analyzer>` needs @JvmSuppressWildcards at both ends of this binding: Kotlin's
     // `List<out E>` declaration-site variance otherwise makes javac-generated Dagger code see
     // `List<? extends Analyzer>` from one of these two signatures and `List<Analyzer>` from the
@@ -66,7 +79,9 @@ object AnalysisModule {
         urlAnalyzer: UrlAnalyzer,
         senderAnalyzer: SenderAnalyzer,
         patternAnalyzer: PatternAnalyzer,
-    ): List<@JvmSuppressWildcards Analyzer> = listOf(urlAnalyzer, senderAnalyzer, patternAnalyzer)
+        classifierAnalyzer: ClassifierAnalyzer,
+    ): List<@JvmSuppressWildcards Analyzer> =
+        listOf(urlAnalyzer, senderAnalyzer, patternAnalyzer, classifierAnalyzer)
 
     @Provides
     @Singleton
@@ -74,11 +89,17 @@ object AnalysisModule {
 
     @Provides
     @Singleton
-    fun provideAnalysisPipeline(orchestrator: Orchestrator, loadedRulePack: LoadedRulePack): AnalysisPipeline =
+    fun provideAnalysisPipeline(
+        orchestrator: Orchestrator,
+        loadedRulePack: LoadedRulePack,
+        classifierAssets: ClassifierAssets,
+    ): AnalysisPipeline =
         AnalysisPipeline(
             orchestrator = orchestrator,
             rulepackVersion = loadedRulePack.rulePack.meta.version,
-            modelVersion = null, // Phase 4 wires the classifier's model version in here.
+            // Provenance only: read the bundled model's version if there is one. Absent asset or a
+            // toy meta.json with no version field → null, and the result simply carries no model tag.
+            modelVersion = runCatching { parseClassifierMeta(classifierAssets.readMetaJson()).modelVersion }.getOrNull(),
         )
 
     @Provides

@@ -137,6 +137,18 @@ tasks.register<Copy>("copyModelAssets") {
     onlyIf { quantizedModelFile.exists() }
 }
 
+// The Phase 4 live-pipeline instrumented test (ClassifierRegressionTest) checks the *same* Phase 1
+// fixture corpus (design.md §12) that VerdictFixtureTest uses, but with the classifier actually
+// running on-device. That corpus lives in the JVM test source set; androidTest can't read it there,
+// so copy it into androidTest assets. Gitignored generated output; wired into the test build so it
+// is always fresh.
+val copyFixtureCorpus = tasks.register<Copy>("copyFixtureCorpus") {
+    from(layout.projectDirectory.file("src/test/resources/fixtures/verdicts.json"))
+    into(layout.projectDirectory.dir("src/androidTest/assets/fixtures"))
+}
+tasks.matching { it.name == "generateDebugAndroidTestAssets" || it.name == "preDebugAndroidTestBuild" }
+    .configureEach { dependsOn(copyFixtureCorpus) }
+
 dependencies {
     // architecture.md §5 — :app is the only module that may see analyzer *implementations*.
     // It binds them to interfaces via Hilt so that :core:analysis stays implementation-blind.
@@ -180,6 +192,10 @@ dependencies {
     testImplementation(libs.turbine)
 
     androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.kotlinx.serialization.json)
     androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
