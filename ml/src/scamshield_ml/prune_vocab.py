@@ -11,7 +11,10 @@ maps exactly those token strings to their new ids -- and always rebuilds the tok
 subword (especially a `##`-continuation piece) changes how *other*, still-kept, whole words get
 segmented, not just whether the pruned token itself is reachable. Getting that fully right needs
 re-deriving merge behavior, which is real work belonging to whoever runs Stage C for real, not
-speculative work to do now with no real corpus to prune against. This module is exercised and
+speculative work to do now with no real corpus to prune against. So the simplification is now
+*enforced* rather than merely noted: [_assert_wordlevel] refuses a WordPiece (or any non-WordLevel)
+input with the exact checklist of what to implement, so a real MuRIL run fails loudly here instead
+of silently shipping a mis-segmenting tokenizer. This module is exercised and
 tested end-to-end regardless, because the id-remapping mechanics (frequency counting, keep/drop
 selection, embedding slicing, id remap, tokenizer round-trip, the 2-epoch recovery fine-tune) are
 the same regardless of the underlying tokenizer model class.
@@ -93,7 +96,27 @@ def build_id_remap(kept_ids: list[int]) -> dict[int, int]:
     return {old: new for new, old in enumerate(kept_ids)}
 
 
+def _assert_wordlevel(tokenizer: PreTrainedTokenizerBase) -> None:
+    """The gate for the WordPiece simplification documented at the top of this module. Rather than
+    silently rebuild a WordPiece tokenizer as WordLevel (which would mis-segment every kept word
+    whose subword pieces changed), refuse and spell out exactly what a real Stage C run must add.
+    """
+    backend = getattr(tokenizer, "backend_tokenizer", None)
+    model_class = type(backend.model).__name__ if backend is not None else "WordLevel"
+    if model_class != "WordLevel":
+        raise NotImplementedError(
+            f"prune_vocab only rebuilds WordLevel tokenizers, but the input is {model_class} "
+            "(e.g. real google/muril-base-cased is WordPiece). To prune WordPiece correctly you must: "
+            "(1) keep whole tokens AND the ## continuation pieces any kept word still decomposes into; "
+            "(2) rebuild a WordPiece backend (tokenizers.models.WordPiece) with its unk_token and "
+            "continuing_subword_prefix, not WordLevel+Whitespace; (3) re-verify segmentation of the "
+            "kept corpus is unchanged for surviving words before slicing the embedding. Implement that "
+            "here, or prune against a WordLevel student. See this module's docstring."
+        )
+
+
 def build_pruned_tokenizer(tokenizer: PreTrainedTokenizerBase, kept_ids: list[int]) -> PreTrainedTokenizerFast:
+    _assert_wordlevel(tokenizer)
     tokens = tokenizer.convert_ids_to_tokens(kept_ids)
     new_vocab = {tok: i for i, tok in enumerate(tokens)}
     backend = Tokenizer(WordLevel(vocab=new_vocab, unk_token=tokenizer.unk_token))

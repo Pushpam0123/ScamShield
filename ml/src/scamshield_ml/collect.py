@@ -28,6 +28,11 @@ from .jsonl_io import write_jsonl
 from .pii_scrub import scrub
 from .schema import LANGUAGES, Row
 
+# Sources known to carry no personal names (or to be already-public research corpora), so the
+# incomplete name scrubbing (pii_scrub.py: numbers + salutations only, no general NER) is
+# acceptable. Anything else is gated behind an explicit human `--names-verified` sign-off.
+PUBLIC_NAME_SAFE_SOURCES = frozenset({"uci_sms_spam_collection"})
+
 
 def read_csv_texts(path: Path, column: str = "text") -> Iterator[str]:
     with path.open(newline="", encoding="utf-8") as f:
@@ -46,15 +51,32 @@ def read_plaintext_lines(path: Path) -> Iterator[str]:
                 yield text
 
 
-def collect(texts: Iterator[str], source: str, lang: str, id_prefix: str = "sms") -> list[Row]:
+def collect(
+    texts: Iterator[str],
+    source: str,
+    lang: str,
+    id_prefix: str = "sms",
+    names_verified: bool = False,
+) -> list[Row]:
     """Scrubs PII and assembles the shared [Row] schema, one call per source/language batch --
     a single collection run is assumed to be one source in one language, which keeps this
     simple and matches how sources are actually gathered in practice (a Hindi advisory bulletin
     and an English one are two separate runs, not one mixed-language CSV with a language
     column to get wrong).
+
+    The name-scrubbing gate (see pii_scrub.py): personal names in the message *body* are not
+    scrubbed by regex alone. Unless [source] is on [PUBLIC_NAME_SAFE_SOURCES] or [names_verified]
+    is set (a human confirming names were handled out-of-band, e.g. by an NER pass), this refuses
+    to proceed -- so at-volume collection cannot silently write name-bearing rows to disk.
     """
     if lang not in LANGUAGES:
         raise ValueError(f"unknown language: {lang!r}")
+    if not names_verified and source not in PUBLIC_NAME_SAFE_SOURCES:
+        raise ValueError(
+            f"source {source!r} is not on the name-safe allowlist and --names-verified was not set. "
+            "pii_scrub.py does not scrub in-body personal names; wire an NER pass (or confirm the "
+            "source carries none) before collecting at volume. See pii_scrub.py's module docstring."
+        )
     collected_at = datetime.now(timezone.utc).date().isoformat()
     rows = []
     for i, text in enumerate(texts):
@@ -78,10 +100,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--source", required=True, help="Recorded on every row, e.g. cybercrime_advisory_2026")
     parser.add_argument("--lang", required=True, choices=LANGUAGES)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument(
+        "--names-verified",
+        action="store_true",
+        help="Assert that in-body personal names were handled out-of-band (NER pass / human review). "
+        "Required for any source not on PUBLIC_NAME_SAFE_SOURCES — see pii_scrub.py.",
+    )
     args = parser.parse_args(argv)
 
     texts = read_csv_texts(args.input, args.column) if args.format == "csv" else read_plaintext_lines(args.input)
-    rows = collect(texts, source=args.source, lang=args.lang)
+    rows = collect(texts, source=args.source, lang=args.lang, names_verified=args.names_verified)
     write_jsonl(rows, args.output)
     print(f"Wrote {len(rows)} unlabeled rows to {args.output}", file=sys.stderr)
     return 0

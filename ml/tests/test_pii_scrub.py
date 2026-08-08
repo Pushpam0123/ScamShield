@@ -31,6 +31,23 @@ def test_a_message_with_no_pii_is_unchanged():
     assert scrub(text) == text
 
 
+def test_scrubs_a_salutation_anchored_personal_name():
+    assert scrub("Dear Rahul, your OTP is 482913") == "Dear <NAME>, your OTP is 482913"
+    assert scrub("Hi Priya Sharma, welcome") == "Hi <NAME>, welcome"
+    assert scrub("Mr. Kumar, please verify") == "Mr. <NAME>, please verify"
+
+
+def test_does_not_scrub_generic_addressees_as_names():
+    # "Dear Customer" is not a personal name and must survive untouched.
+    assert scrub("Dear Customer, your bill is due") == "Dear Customer, your bill is due"
+    assert scrub("Hello Sir, your request is noted") == "Hello Sir, your request is noted"
+
+
+def test_does_not_mistake_an_all_caps_brand_after_a_salutation_for_a_name():
+    # Title-case-only anchoring means all-caps brands are left alone.
+    assert scrub("Dear SBI user, update KYC") == "Dear SBI user, update KYC"
+
+
 def test_multiple_pii_items_in_one_message():
     text = "Rs.2,500.00 debited from A/c XX998877665544. Not you? Call 9876543210."
     scrubbed = scrub(text)

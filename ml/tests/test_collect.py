@@ -8,7 +8,7 @@ from scamshield_ml.jsonl_io import read_jsonl, write_jsonl
 
 def test_collect_assigns_sequential_ids_and_scrubs_pii():
     texts = iter(["call 9876543210 now", "hello there"])
-    rows = collect(texts, source="testsrc", lang="EN")
+    rows = collect(texts, source="testsrc", lang="EN", names_verified=True)
     assert len(rows) == 2
     assert rows[0].id == "sms_testsrc_000000"
     assert rows[1].id == "sms_testsrc_000001"
@@ -17,7 +17,7 @@ def test_collect_assigns_sequential_ids_and_scrubs_pii():
 
 
 def test_collected_rows_are_unlabeled():
-    rows = collect(iter(["a message"]), source="s", lang="EN")
+    rows = collect(iter(["a message"]), source="s", lang="EN", names_verified=True)
     assert not rows[0].is_labeled
     assert rows[0].label is None
     assert rows[0].category is None
@@ -26,6 +26,18 @@ def test_collected_rows_are_unlabeled():
 def test_collect_rejects_an_unknown_language():
     with pytest.raises(ValueError, match="language"):
         collect(iter(["x"]), source="s", lang="KLINGON")
+
+
+def test_collect_gates_unknown_sources_on_the_name_scrub():
+    # A source not on the allowlist, without --names-verified, must refuse rather than write
+    # possibly-name-bearing rows to disk (pii_scrub.py's name gate).
+    with pytest.raises(ValueError, match="names-verified"):
+        collect(iter(["Dear Rahul, your account is active"]), source="some_new_portal", lang="EN")
+
+
+def test_collect_allows_the_public_allowlisted_source_without_the_flag():
+    rows = collect(iter(["hello"]), source="uci_sms_spam_collection", lang="EN")
+    assert len(rows) == 1
 
 
 def test_read_plaintext_lines_skips_blank_lines(tmp_path: Path):
@@ -42,7 +54,7 @@ def test_read_csv_texts_reads_the_named_column(tmp_path: Path):
 
 
 def test_collect_then_write_then_read_round_trips(tmp_path: Path):
-    rows = collect(iter(["one", "two", "three"]), source="s", lang="HI_LATN")
+    rows = collect(iter(["one", "two", "three"]), source="s", lang="HI_LATN", names_verified=True)
     output = tmp_path / "out.jsonl"
     write_jsonl(rows, output)
     read_back = read_jsonl(output)

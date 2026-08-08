@@ -13,7 +13,28 @@ from scamshield_ml.prune_vocab import (
 from .conftest import tiny_teacher_config
 from .test_train_teacher import synthetic_dataset
 
+import pytest
 import torch
+from tokenizers import Tokenizer
+from tokenizers.models import WordPiece
+from tokenizers.pre_tokenizers import Whitespace
+from transformers import PreTrainedTokenizerFast
+
+
+def _wordpiece_tokenizer() -> PreTrainedTokenizerFast:
+    vocab = {tok: i for i, tok in enumerate(["[PAD]", "[UNK]", "[CLS]", "[SEP]", "your", "otp", "##s"])}
+    backend = Tokenizer(WordPiece(vocab=vocab, unk_token="[UNK]"))
+    backend.pre_tokenizer = Whitespace()
+    return PreTrainedTokenizerFast(
+        tokenizer_object=backend, unk_token="[UNK]", pad_token="[PAD]", cls_token="[CLS]", sep_token="[SEP]"
+    )
+
+
+def test_build_pruned_tokenizer_refuses_wordpiece_input():
+    # A WordPiece tokenizer (like real MuRIL) must fail loudly, not be silently downgraded to
+    # WordLevel — see prune_vocab._assert_wordlevel and the module docstring.
+    with pytest.raises(NotImplementedError, match="WordPiece"):
+        build_pruned_tokenizer(_wordpiece_tokenizer(), kept_ids=[0, 1, 2, 3, 4, 5])
 
 
 def test_special_token_ids_includes_pad_unk_cls_sep(tiny_tokenizer):
