@@ -14,6 +14,16 @@ a plain-language answer, the kind you could read out loud to a parent: "This mes
 SBI, but the link goes to a website that's four days old. Real SBI texts never ask you to click a
 link to update your KYC." Then it tells you what to do about it.
 
+## Working demonstration
+
+Running on an emulator. Paste a suspicious message, tap Check, and you get a verdict with the
+reasons behind it. Here's a fake SBI KYC phishing SMS going through the full pipeline, rules and the
+on-device classifier together.
+
+| Check a message | The verdict |
+|---|---|
+| ![The check screen, with a phishing SMS pasted in](screenshots/check-screen.png) | ![A "This looks like a scam" verdict with the reasons listed](screenshots/result-scam.png) |
+
 ## Why it's built the way it is
 
 One rule shapes almost every decision here: the message never leaves the phone. People are going to
@@ -48,7 +58,9 @@ Not usable end to end yet. Where things stand:
   - The bundled model is a toy (DistilBERT, English, about 180 rows) that only exists to prove the
     wiring. Its accuracy numbers don't mean anything yet, and with it live, several genuine bank SMS
     get wrongly flagged. A real multilingual model is the next big piece.
-  - No UI. There's a share-sheet entry point and the analysis pipeline behind it, but no screens.
+  - The UI covers the core flow only: a paste-or-share screen and a result screen with the verdict,
+    the reasons, and what to do (see above). It's plain and unpolished, and there's no history,
+    settings, or onboarding yet.
   - The APK is over budget. The full ONNX Runtime build plus the tokenizer's native library push it
     well past the 25 MB target. Getting there needs ONNX Runtime Mobile (the reduced-op build) and
     per-ABI app-bundle delivery.
