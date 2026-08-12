@@ -124,5 +124,8 @@ Not decided yet.
 
 ---
 
-If you're reading this on GitHub and it looks unfinished, it is. Come back later, or open an issue
-if something here seems worth talking about.
+ScamShield is under active development. The rules engine and the on-device classifier pipeline are
+built, tested, and running end to end on a device; the roadmap above is what's next, in the open.
+Issues and suggestions are welcome.
+
+**Author:** Pushpam Raj
